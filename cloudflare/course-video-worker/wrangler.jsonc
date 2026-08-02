@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "thetraderscartel-course-video",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-02",
+  "r2_buckets": [
+    {
+      "binding": "COURSE_VIDEOS",
+      "bucket_name": "thetraderscartel-course-videos"
+    }
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://hwmwwhwdvgnlvgxltjlb.supabase.co"
+  }
+}

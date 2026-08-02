@@ -83,7 +83,7 @@ describe("course sequencing", () => {
   it("ignores unknown progress when calculating completion", () => {
     expect(getCourseCompletion(new Set([courseLessons[0].key, "removed-lesson"]))).toEqual({
       completedCount: 1,
-      percentage: 11,
+      percentage: Math.round(100 / courseLessons.length),
     });
   });
 });

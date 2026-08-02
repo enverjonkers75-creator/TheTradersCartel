@@ -3,26 +3,14 @@ export type CourseLesson = {
   title: string;
   label: string;
   description: string;
-  videoUrl: string | null;
+  module: string;
+  storageKey: string | null;
 };
 
-// Add each supplied course video URL here. The lesson order controls unlocking.
-export const courseLessons: CourseLesson[] = [
-  {
-    key: "introduction",
-    label: "Start here",
-    title: "Introduction",
-    description: "Welcome to TheTradersCartel course and the learning path ahead.",
-    videoUrl: null,
-  },
-  ...Array.from({ length: 8 }, (_, index) => ({
-    key: `lesson-${String(index + 1).padStart(2, "0")}`,
-    label: `Lesson ${String(index + 1).padStart(2, "0")}`,
-    title: `Course lesson ${String(index + 1).padStart(2, "0")}`,
-    description: "This lesson is ready for its course video and final title.",
-    videoUrl: null,
-  })),
-];
+import { generatedCourseLessons } from "@/lib/course-manifest.generated";
+
+// Generated from the course drive. Array order controls sequential unlocking.
+export const courseLessons: CourseLesson[] = generatedCourseLessons;
 
 export function isCourseLessonUnlocked(index: number, completedKeys: Set<string>) {
   return index === 0 || completedKeys.has(courseLessons[index - 1].key);
