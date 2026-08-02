@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateAnalytics, calculateCumulativePnl, calculateEquityCurve, calculateQuickJournalAnalytics, calculateTradeMetrics, groupForZarBalance, validateJournalScreenshot } from "@shared/member";
-import { courseLessons, getCourseCompletion, isCourseLessonUnlocked } from "@/lib/course";
+import { courseLessons, courseSummaryLessons, getCourseCompletion, isCourseLessonUnlocked } from "@/lib/course";
 import { formatMemberActivity, isMemberOnline } from "@/lib/presence";
 
 describe("groupForZarBalance", () => {
@@ -68,22 +68,26 @@ describe("journal screenshot validation", () => {
 });
 
 describe("course sequencing", () => {
-  it("starts with only the introduction unlocked", () => {
+  it("keeps empty summary slots browseable without blocking the full course", () => {
     const completed = new Set<string>();
     expect(isCourseLessonUnlocked(0, completed)).toBe(true);
-    expect(isCourseLessonUnlocked(1, completed)).toBe(false);
+    expect(isCourseLessonUnlocked(1, completed)).toBe(true);
+    expect(isCourseLessonUnlocked(courseSummaryLessons.length, completed)).toBe(true);
   });
 
-  it("unlocks only the lesson immediately after a completed lesson", () => {
-    const completed = new Set([courseLessons[0].key]);
-    expect(isCourseLessonUnlocked(1, completed)).toBe(true);
-    expect(isCourseLessonUnlocked(2, completed)).toBe(false);
+  it("unlocks full-course lessons in their original order", () => {
+    const firstCourseIndex = courseSummaryLessons.length;
+    const completed = new Set([courseLessons[firstCourseIndex].key]);
+    expect(isCourseLessonUnlocked(firstCourseIndex + 1, completed)).toBe(true);
+    expect(isCourseLessonUnlocked(firstCourseIndex + 2, completed)).toBe(false);
   });
 
   it("ignores unknown progress when calculating completion", () => {
-    expect(getCourseCompletion(new Set([courseLessons[0].key, "removed-lesson"]))).toEqual({
+    const firstAvailable = courseLessons.find((lesson) => lesson.storageKey)!;
+    expect(getCourseCompletion(new Set([firstAvailable.key, "removed-lesson"]))).toEqual({
       completedCount: 1,
-      percentage: Math.round(100 / courseLessons.length),
+      totalCount: courseLessons.filter((lesson) => lesson.storageKey).length,
+      percentage: Math.round(100 / courseLessons.filter((lesson) => lesson.storageKey).length),
     });
   });
 });

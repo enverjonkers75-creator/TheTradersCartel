@@ -49,7 +49,7 @@ export default function CoursePage() {
   }, [progress]);
   const activeIndex = courseLessons.findIndex((lesson) => lesson.key === activeKey);
   const activeLesson = courseLessons[Math.max(0, activeIndex)];
-  const { completedCount, percentage: completion } = getCourseCompletion(completedKeys);
+  const { completedCount, totalCount, percentage: completion } = getCourseCompletion(completedKeys);
   const courseModules = useMemo(() => {
     const groups = new Map<string, Array<{ lesson: typeof courseLessons[number]; index: number }>>();
     courseLessons.forEach((lesson, index) => {
@@ -135,7 +135,8 @@ export default function CoursePage() {
               The Traders Cartel Course
             </h1>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-white/55">{courseLessons.length} lessons</span>
+              <span className="border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-white/55">{totalCount} lessons</span>
+              <span className="border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-white/55">5 summary videos</span>
               <span className="border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-white/55">All levels</span>
               <span className="border border-white/20 bg-white/[0.09] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-white/75">Member access</span>
             </div>
@@ -145,7 +146,7 @@ export default function CoursePage() {
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-[9px] uppercase tracking-[0.18em] text-white/28">Your progress</p>
-                <p className="mt-1 text-sm text-white/55">{completedCount} of {courseLessons.length} complete</p>
+                <p className="mt-1 text-sm text-white/55">{completedCount} of {totalCount} available videos complete</p>
               </div>
               <span className="font-display text-3xl font-semibold text-white">{completion}%</span>
             </div>

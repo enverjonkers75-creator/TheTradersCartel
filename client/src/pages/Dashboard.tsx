@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Activity, ArrowUpRight, BarChart3, Clock3, Plus, Target } from "lucide-react";
+import { Activity, ArrowRight, ArrowUpRight, BarChart3, Clock3, GraduationCap, Plus, Target } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { MemberLayout } from "@/components/member/MemberLayout";
@@ -57,6 +57,25 @@ export default function Dashboard() {
       <div><p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/32">Performance dashboard</p><h1 className="mt-3 text-3xl font-semibold tracking-[-0.045em]">Good to see you, {firstName}.</h1><p className="mt-2 text-sm text-white/38">A clear view of the trades you have logged.</p></div>
       {currencies.length > 1 && <label className="text-[9px] font-semibold uppercase tracking-[0.17em] text-white/30">Currency<select value={currency} onChange={(event) => chooseCurrency(event.target.value)} className="mt-2 block h-10 min-w-32 rounded-md border border-white/10 bg-black px-3 text-xs text-white outline-none">{currencies.map((item) => <option key={item}>{item}</option>)}</select></label>}
     </section>
+
+    <motion.section
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.04 }}
+      className="mt-9 flex flex-col gap-5 border-y border-white/[0.08] py-6 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div className="flex items-start gap-4">
+        <span className="grid size-11 shrink-0 place-items-center border border-white/10 bg-white/[0.035]"><GraduationCap className="size-5 text-white/55" /></span>
+        <div>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/30">Member course</p>
+          <h2 className="mt-1.5 text-base font-semibold text-white">Course summaries and the full trading programme</h2>
+          <p className="mt-1 text-xs leading-5 text-white/30">Start with the five quick summaries or continue through the complete course.</p>
+        </div>
+      </div>
+      <Link href="/dashboard/course" className="flex h-10 shrink-0 items-center justify-center gap-2 border border-white/15 px-4 text-[10px] font-semibold uppercase tracking-[0.13em] text-white/65 transition hover:bg-white/[0.07] hover:text-white">
+        Open course <ArrowRight className="size-3.5" />
+      </Link>
+    </motion.section>
 
     {isLoading ? <div className="mt-12 h-64 animate-pulse border-y border-white/[0.07] bg-white/[0.015]" /> : error ? <div className="mt-12 border-y border-white/[0.07] py-14"><p className="text-sm text-white/55">We could not load your journal right now.</p><p className="mt-2 text-xs text-white/25">Please refresh the page or try again shortly.</p></div> : entries.length === 0 ? <section className="mt-14 border-y border-white/[0.07] py-16 text-center"><BarChart3 className="mx-auto size-7 text-white/35" /><h2 className="mt-5 text-xl font-semibold tracking-[-0.03em]">Your dashboard starts with one trade</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/35">Log the result, currency and a short note. Your performance will calculate automatically.</p><Link href="/dashboard/journal?new=1" className="mt-7 inline-flex h-11 items-center gap-2 rounded-md bg-[#d8d8d8] px-5 text-xs font-semibold text-black"><Plus className="size-4" />Log first trade</Link></section> : <>
       <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-8 lg:grid-cols-4 lg:gap-x-9">
