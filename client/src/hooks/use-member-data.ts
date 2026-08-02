@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { Trade, TradingAccount } from "@/lib/member-types";
-import type { JournalEntry } from "@/lib/member-types";
+import type { CourseLessonProgress, JournalEntry } from "@/lib/member-types";
 
 export function useAccounts(userId?: string) {
   return useQuery({
@@ -41,6 +41,22 @@ export function useJournalEntries(userId?: string) {
         .order("traded_at", { ascending: false });
       if (error) throw error;
       return data as JournalEntry[];
+    },
+  });
+}
+
+export function useCourseProgress(userId?: string) {
+  return useQuery({
+    queryKey: ["course-progress", userId],
+    enabled: Boolean(userId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("course_lesson_progress")
+        .select("*")
+        .eq("user_id", userId!)
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []) as CourseLessonProgress[];
     },
   });
 }

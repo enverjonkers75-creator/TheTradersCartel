@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateAnalytics, calculateCumulativePnl, calculateEquityCurve, calculateQuickJournalAnalytics, calculateTradeMetrics, groupForZarBalance, validateJournalScreenshot } from "@shared/member";
+import { courseLessons, getCourseCompletion, isCourseLessonUnlocked } from "@/lib/course";
 
 describe("groupForZarBalance", () => {
   it.each([[0,1],[19999.99,1],[20000,2],[49999.99,2],[50000,3],[1000000,3]])("assigns %s to group %s", (balance, group) => expect(groupForZarBalance(balance)).toBe(group));
@@ -62,5 +63,26 @@ describe("journal screenshot validation", () => {
   it("rejects unsupported files and oversized images", () => {
     expect(validateJournalScreenshot({ type: "application/pdf", size: 1024 })).toMatch(/JPG/);
     expect(validateJournalScreenshot({ type: "image/png", size: 8 * 1024 * 1024 + 1 })).toMatch(/8 MB/);
+  });
+});
+
+describe("course sequencing", () => {
+  it("starts with only the introduction unlocked", () => {
+    const completed = new Set<string>();
+    expect(isCourseLessonUnlocked(0, completed)).toBe(true);
+    expect(isCourseLessonUnlocked(1, completed)).toBe(false);
+  });
+
+  it("unlocks only the lesson immediately after a completed lesson", () => {
+    const completed = new Set([courseLessons[0].key]);
+    expect(isCourseLessonUnlocked(1, completed)).toBe(true);
+    expect(isCourseLessonUnlocked(2, completed)).toBe(false);
+  });
+
+  it("ignores unknown progress when calculating completion", () => {
+    expect(getCourseCompletion(new Set([courseLessons[0].key, "removed-lesson"]))).toEqual({
+      completedCount: 1,
+      percentage: 11,
+    });
   });
 });

@@ -8,6 +8,7 @@ import Home from "@/pages/Home";
 import GalleryPage from "@/pages/Gallery";
 import JournalPage from "@/pages/Journal";
 import Dashboard from "@/pages/Dashboard";
+import CoursePage from "@/pages/Course";
 import AdminPage from "@/pages/Admin";
 import { ForgotPasswordPage, LoginPage, PendingPage, ResetPasswordPage, SignupPage } from "@/pages/Auth";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -26,8 +27,9 @@ function Router() {
       <Route path="/rejected"><PendingPage status="rejected" /></Route>
       <Route path="/suspended"><PendingPage status="suspended" /></Route>
       <Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
+      <Route path="/dashboard/course"><ProtectedRoute><CoursePage /></ProtectedRoute></Route>
       <Route path="/dashboard/journal"><ProtectedRoute><JournalPage /></ProtectedRoute></Route>
-      <Route path="/dashboard/education"><Redirect to="/dashboard" /></Route>
+      <Route path="/dashboard/education"><Redirect to="/dashboard/course" /></Route>
       <Route path="/dashboard/analytics"><Redirect to="/dashboard" /></Route>
       <Route path="/dashboard/calendar"><Redirect to="/dashboard" /></Route>
       <Route path="/dashboard/chat"><Redirect to="/dashboard" /></Route>

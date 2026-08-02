@@ -1,12 +1,13 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, X } from "lucide-react";
+import { BookOpen, GraduationCap, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 
 const items = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Course", href: "/dashboard/course", icon: GraduationCap },
   { label: "Journal", href: "/dashboard/journal", icon: BookOpen },
 ];
 
