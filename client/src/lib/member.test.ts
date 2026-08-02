@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateAnalytics, calculateCumulativePnl, calculateEquityCurve, calculateQuickJournalAnalytics, calculateTradeMetrics, groupForZarBalance, validateJournalScreenshot } from "@shared/member";
 import { courseLessons, getCourseCompletion, isCourseLessonUnlocked } from "@/lib/course";
+import { formatMemberActivity, isMemberOnline } from "@/lib/presence";
 
 describe("groupForZarBalance", () => {
   it.each([[0,1],[19999.99,1],[20000,2],[49999.99,2],[50000,3],[1000000,3]])("assigns %s to group %s", (balance, group) => expect(groupForZarBalance(balance)).toBe(group));
@@ -84,5 +85,20 @@ describe("course sequencing", () => {
       completedCount: 1,
       percentage: 11,
     });
+  });
+});
+
+describe("member presence", () => {
+  const now = new Date("2026-08-02T10:00:00Z").getTime();
+
+  it("treats activity within five minutes as online", () => {
+    expect(isMemberOnline("2026-08-02T09:56:00Z", now)).toBe(true);
+    expect(isMemberOnline("2026-08-02T09:54:59Z", now)).toBe(false);
+  });
+
+  it("formats online, offline and never active states", () => {
+    expect(formatMemberActivity("2026-08-02T09:59:00Z", now)).toBe("Online now");
+    expect(formatMemberActivity("2026-08-02T09:40:00Z", now)).toBe("Last seen 20 min ago");
+    expect(formatMemberActivity(null, now)).toBe("Never active");
   });
 });

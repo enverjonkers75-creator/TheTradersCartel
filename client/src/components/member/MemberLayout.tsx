@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BookOpen, GraduationCap, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { queryClient } from "@/lib/queryClient";
 
 const items = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -21,6 +23,30 @@ export function MemberLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const initials = profile?.full_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "TC";
   const admin = profile?.role === "owner" || profile?.role === "developer";
+
+  useEffect(() => {
+    if (!profile || profile.status !== "active") return;
+    const touch = async () => {
+      if (document.visibilityState !== "visible") return;
+      const { error } = await supabase.rpc("touch_member_activity");
+      if (!error) await queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+    };
+    void touch();
+    const handleActivity = () => void touch();
+    const timer = window.setInterval(handleActivity, 60_000);
+    window.addEventListener("focus", handleActivity);
+    document.addEventListener("visibilitychange", handleActivity);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", handleActivity);
+      document.removeEventListener("visibilitychange", handleActivity);
+    };
+  }, [profile]);
+
+  async function handleSignOut() {
+    await supabase.rpc("mark_member_offline");
+    await signOut();
+  }
 
   const nav = <>
     <p className="px-3 text-[9px] font-semibold uppercase tracking-[0.24em] text-white/25">Workspace</p>
@@ -50,7 +76,7 @@ export function MemberLayout({ children }: { children: ReactNode }) {
       <p className="truncate text-sm text-white/90">{profile?.full_name}</p>
       <p className="mt-0.5 text-[9px] uppercase tracking-[0.17em] text-white/32">{profile?.role === "student" ? "Member" : profile?.role}</p>
     </div>
-    <button aria-label="Sign out" onClick={() => signOut()} className="text-white/30 transition hover:text-white"><LogOut className="size-4" /></button>
+    <button aria-label="Sign out" onClick={() => void handleSignOut()} className="text-white/30 transition hover:text-white"><LogOut className="size-4" /></button>
   </div>;
 
   return <div className="min-h-screen bg-[#050505] font-sans text-white selection:bg-white selection:text-black">
