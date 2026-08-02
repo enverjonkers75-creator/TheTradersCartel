@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Circle, Clock3, ShieldCheck, UserRoundCheck, UserRoundX } from "lucide-react";
+import { BellRing, Check, Circle, Clock3, ShieldCheck, UserRoundCheck, UserRoundX } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MemberLayout } from "@/components/member/MemberLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,6 +45,7 @@ export default function AdminPage() {
   }), [members, filter, now]);
   const students = members.filter((member) => member.role === "student");
   const onlineCount = members.filter((member) => isMemberOnline(member.last_seen_at, now)).length;
+  const pendingCount = students.filter((member) => member.status === "pending").length;
 
   async function changeStatus(member: AdminProfile, next: "active" | "rejected" | "suspended") {
     setBusyId(member.id);
@@ -52,16 +53,29 @@ export default function AdminPage() {
     const { error: rpcError } = await supabase.rpc("set_member_status", { target_user: member.id, next_status: next });
     setBusyId("");
     if (rpcError) return setMessage(rpcError.message);
-    setMessage(`${member.full_name || member.email} is now ${next}.`);
+    let emailSent = false;
+    if (next === "active") {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        const response = await fetch("/api/membership-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` },
+          body: JSON.stringify({ action: "approved", targetUser: member.id }),
+        });
+        emailSent = response.ok;
+      }
+    }
+    setMessage(`${member.full_name || member.email} is now ${next}.${next === "active" ? emailSent ? " Their approval email was sent." : " Approval succeeded, but the email sender is not connected yet." : ""}`);
     await queryClient.invalidateQueries({ queryKey: ["admin-members"] });
   }
 
   return <MemberLayout>
     <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/32">Private administration</p><h1 className="mt-3 text-3xl font-semibold tracking-[-0.045em]">Member approvals</h1><p className="mt-2 text-sm text-white/38">Control access without viewing anyone’s private journal.</p></div><ShieldCheck className="size-7 text-white/35" /></div>
     {message && <p role="status" className="mt-6 border-l border-white/35 pl-3 text-xs text-white/60">{message}</p>}
+    {pendingCount > 0 && <div className="mt-7 flex items-start gap-4 border border-white/12 bg-white/[0.045] p-5"><BellRing className="mt-0.5 size-5 text-white/70" /><div><p className="text-sm font-medium text-white">{pendingCount === 1 ? "A new member is waiting for approval" : `${pendingCount} new members are waiting for approval`}</p><p className="mt-1 text-xs leading-5 text-white/35">Review the pending list below. Approval gives immediate access to the dashboard, journal and course.</p></div></div>}
 
     <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-7 sm:grid-cols-5">
-      <button onClick={() => setFilter("pending")} className={`border-t pt-4 text-left transition ${filter === "pending" ? "border-white/60" : "border-white/[0.08] hover:border-white/25"}`}><span className="text-2xl font-semibold">{students.filter((member) => member.status === "pending").length}</span><span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.18em] text-white/30">Pending</span></button>
+      <button onClick={() => setFilter("pending")} className={`border-t pt-4 text-left transition ${filter === "pending" ? "border-white/60" : "border-white/[0.08] hover:border-white/25"}`}><span className="text-2xl font-semibold">{pendingCount}</span><span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.18em] text-white/30">Pending</span></button>
       <button onClick={() => setFilter("online")} className={`border-t pt-4 text-left transition ${filter === "online" ? "border-emerald-400/70" : "border-white/[0.08] hover:border-emerald-400/35"}`}><span className="flex items-center gap-2 text-2xl font-semibold"><span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.7)]" />{onlineCount}</span><span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.18em] text-white/30">Online now</span></button>
       {(["active", "rejected", "suspended"] as MemberStatus[]).map((status) => <button key={status} onClick={() => setFilter(status)} className={`border-t pt-4 text-left transition ${filter === status ? "border-white/60" : "border-white/[0.08] hover:border-white/25"}`}><span className="text-2xl font-semibold">{students.filter((member) => member.status === status).length}</span><span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.18em] text-white/30">{statusLabel[status]}</span></button>)}
     </div>

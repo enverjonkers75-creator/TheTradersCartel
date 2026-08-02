@@ -243,14 +243,14 @@ export function SignupPage() {
   if (submitted)
     return (
       <AuthFrame
-        eyebrow="Account ready"
-        title="Check your email"
-        description="Confirm your email address to finish creating your account."
+        eyebrow="Thank you for joining"
+        title="Confirm your email, then wait for approval"
+        description="Your account has been created. Check your inbox and confirm your email address so the owner can review your membership."
       >
         <div className="border-t border-white/12 pt-7">
           <CheckCircle2 className="size-7 text-white" />
           <p className="mt-4 text-sm leading-6 text-white/55">
-            After confirming your email, sign in and your account will wait for owner approval.
+            Thank you. After confirming your email, sign in and you will see the approval waiting page.
           </p>
           <Link
             href="/login"
@@ -474,6 +474,19 @@ export function PendingPage({ status = "pending" }: { status?: "pending" | "reje
     return () => window.clearInterval(timer);
   }, [session, profile?.status, refreshProfile]);
 
+  useEffect(() => {
+    if (!session || !profile || profile.status !== "pending") return;
+    const notificationKey = `member-owner-notified:${profile.id}`;
+    if (window.localStorage.getItem(notificationKey)) return;
+    fetch("/api/membership-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: "pending" }),
+    }).then((response) => {
+      if (response.ok) window.localStorage.setItem(notificationKey, "true");
+    }).catch(() => undefined);
+  }, [session, profile]);
+
   async function checkStatus() {
     setRefreshing(true);
     setChecked(false);
@@ -487,13 +500,13 @@ export function PendingPage({ status = "pending" }: { status?: "pending" | "reje
   return (
     <AuthFrame
       eyebrow={actualStatus === "suspended" ? "Access suspended" : actualStatus === "rejected" ? "Access declined" : "Approval pending"}
-      title={actualStatus === "pending" ? "Your account is being reviewed" : "Contact the owner"}
+      title={actualStatus === "pending" ? "Thank you. Your account is awaiting approval" : "Contact the owner"}
       description={
         actualStatus === "suspended"
           ? "Your membership access has been suspended. Contact TheTradersCartel for assistance."
           : actualStatus === "rejected"
             ? "Your membership request was not approved. Contact TheTradersCartel if you believe this is a mistake."
-            : "Your email is verified. The owner will review and activate your membership."
+            : "Your email is verified. The owner has been notified and will review your membership."
       }
     >
       <div className="border-t border-white/12 pt-7">
