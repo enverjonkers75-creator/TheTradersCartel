@@ -1,7 +1,7 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link, Redirect, useLocation } from "wouter";
-import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
-import { supabase, supabaseConfigured } from "@/lib/supabase";
+import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, RefreshCw } from "lucide-react";
+import { passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import mentorshipGroup from "@/assets/mentorship-group.png";
 
@@ -87,22 +87,60 @@ function ErrorMessage({ message }: { message: string }) {
   );
 }
 
+function validatePassword(password: string) {
+  if (password.length < 10) return "Use at least 10 characters for your password.";
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return "Include an uppercase letter, a lowercase letter and a number.";
+  }
+  return "";
+}
+
+function readableAuthError(message: string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("invalid login credentials")) return "The email or password is incorrect.";
+  if (normalized.includes("email not confirmed")) return "Confirm your email before signing in.";
+  if (normalized.includes("rate limit")) return "Too many attempts. Wait a few minutes and try again.";
+  return message;
+}
+
 export function LoginPage() {
   const [, setLocation] = useLocation();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
+  const passwordReset = new URLSearchParams(window.location.search).get("reset") === "success";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError("");
     const form = new FormData(event.currentTarget);
+    const email = String(form.get("email")).trim().toLowerCase();
     const { error: authError } = await supabase.auth.signInWithPassword({
-      email: String(form.get("email")).trim(),
+      email,
       password: String(form.get("password")),
     });
     setBusy(false);
-    if (authError) return setError(authError.message);
+    if (authError) {
+      if (authError.message.toLowerCase().includes("email not confirmed")) setUnverifiedEmail(email);
+      return setError(readableAuthError(authError.message));
+    }
     setLocation("/dashboard");
+  }
+
+  async function resendConfirmation() {
+    if (!unverifiedEmail) return;
+    setResendBusy(true);
+    setResendSent(false);
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email: unverifiedEmail,
+      options: { emailRedirectTo: `${window.location.origin}/pending` },
+    });
+    setResendBusy(false);
+    if (resendError) return setError(readableAuthError(resendError.message));
+    setResendSent(true);
   }
   return (
     <AuthFrame
@@ -114,7 +152,14 @@ export function LoginPage() {
         {!supabaseConfigured && (
           <ErrorMessage message="Member services are not configured in this environment." />
         )}
+        {passwordReset && <p role="status" className="border-l border-emerald-400/60 pl-3 text-xs leading-5 text-emerald-200/80">Password updated. You can sign in with your new password.</p>}
         {error && <ErrorMessage message={error} />}
+        {unverifiedEmail && (
+          <button type="button" disabled={resendBusy || resendSent} onClick={() => void resendConfirmation()} className="flex items-center gap-2 text-xs text-white/55 transition hover:text-white disabled:opacity-50">
+            <RefreshCw className={`size-3.5 ${resendBusy ? "animate-spin" : ""}`} />
+            {resendSent ? "Confirmation email sent" : resendBusy ? "Sending confirmation…" : "Resend confirmation email"}
+          </button>
+        )}
         <label className={labelClass}>
           Email
           <input
@@ -168,12 +213,21 @@ export function SignupPage() {
     setError("");
     const form = new FormData(event.currentTarget);
     const password = String(form.get("password"));
-    if (password.length < 10) {
+    const passwordError = validatePassword(password);
+    if (passwordError) {
       setBusy(false);
-      return setError("Use at least 10 characters for your password.");
+      return setError(passwordError);
+    }
+    if (password !== String(form.get("confirmPassword"))) {
+      setBusy(false);
+      return setError("The passwords do not match.");
     }
     const email = String(form.get("email")).trim().toLowerCase();
     const fullName = String(form.get("fullName")).trim();
+    if (fullName.length < 2) {
+      setBusy(false);
+      return setError("Enter your full name.");
+    }
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -183,7 +237,7 @@ export function SignupPage() {
       },
     });
     setBusy(false);
-    if (authError) return setError(authError.message);
+    if (authError) return setError(readableAuthError(authError.message));
     setSubmitted(true);
   }
   if (submitted)
@@ -239,6 +293,18 @@ export function SignupPage() {
             required
             className={fieldClass}
           />
+          <span className="mt-2 block text-[10px] font-normal normal-case tracking-normal text-white/25">10 or more characters with uppercase, lowercase and a number.</span>
+        </label>
+        <label className={labelClass}>
+          Confirm password
+          <input
+            name="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            minLength={10}
+            required
+            className={fieldClass}
+          />
         </label>
         <button disabled={busy} className={buttonClass}>
           {busy ? "Creating account…" : "Create account"}
@@ -258,14 +324,18 @@ export function SignupPage() {
 export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setBusy(true);
+    setError("");
     const form = new FormData(event.currentTarget);
     const { error: authError } = await supabase.auth.resetPasswordForEmail(
-      String(form.get("email")).trim(),
+      String(form.get("email")).trim().toLowerCase(),
       { redirectTo: `${window.location.origin}/reset-password` },
     );
-    if (authError) setError(authError.message);
+    setBusy(false);
+    if (authError) setError(readableAuthError(authError.message));
     else setSent(true);
   }
   return (
@@ -286,9 +356,9 @@ export function ForgotPasswordPage() {
           {error && <ErrorMessage message={error} />}
           <label className={labelClass}>
             Email
-            <input name="email" type="email" required className={fieldClass} />
+            <input name="email" type="email" autoComplete="email" required className={fieldClass} />
           </label>
-          <button className={buttonClass}>Send reset link</button>
+          <button disabled={busy} className={buttonClass}>{busy ? "Sending reset link…" : "Send reset link"}</button>
         </form>
       )}
       <Link
@@ -305,15 +375,63 @@ export function ForgotPasswordPage() {
 export function ResetPasswordPage() {
   const [, setLocation] = useLocation();
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [validRecovery, setValidRecovery] = useState(passwordRecoveryLinkDetected);
+
+  useEffect(() => {
+    let active = true;
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      if (event === "PASSWORD_RECOVERY") setValidRecovery(Boolean(session));
+      setChecking(false);
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setValidRecovery((current) => current && Boolean(data.session));
+      setChecking(false);
+    });
+    return () => { active = false; listener.subscription.unsubscribe(); };
+  }, []);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setBusy(true);
+    setError("");
     const form = new FormData(event.currentTarget);
     const password = String(form.get("password"));
-    if (password.length < 10) return setError("Use at least 10 characters.");
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setBusy(false);
+      return setError(passwordError);
+    }
+    if (password !== String(form.get("confirmPassword"))) {
+      setBusy(false);
+      return setError("The passwords do not match.");
+    }
     const { error: authError } = await supabase.auth.updateUser({ password });
-    if (authError) setError(authError.message);
-    else setLocation("/dashboard");
+    if (authError) {
+      setBusy(false);
+      setError(readableAuthError(authError.message));
+      return;
+    }
+    await supabase.auth.signOut();
+    setLocation("/login?reset=success");
   }
+
+  if (checking) return (
+    <AuthFrame eyebrow="Account recovery" title="Checking your reset link" description="This will only take a moment.">
+      <LoaderCircle className="size-7 animate-spin text-white/55" />
+    </AuthFrame>
+  );
+
+  if (!validRecovery) return (
+    <AuthFrame eyebrow="Reset link unavailable" title="Request a new reset link" description="This password-reset link is invalid, expired or has already been used.">
+      <Link href="/forgot-password" className={buttonClass}>Send a new reset link <ArrowRight className="size-4" /></Link>
+      <Link href="/login" className="mt-6 flex items-center gap-2 text-xs text-white/45"><ArrowLeft className="size-3" />Back to sign in</Link>
+    </AuthFrame>
+  );
+
   return (
     <AuthFrame
       eyebrow="Secure your account"
@@ -327,42 +445,66 @@ export function ResetPasswordPage() {
           <input
             name="password"
             type="password"
+            autoComplete="new-password"
             minLength={10}
             required
             className={fieldClass}
           />
+          <span className="mt-2 block text-[10px] font-normal normal-case tracking-normal text-white/25">10 or more characters with uppercase, lowercase and a number.</span>
         </label>
-        <button className={buttonClass}>Save new password</button>
+        <label className={labelClass}>
+          Confirm new password
+          <input name="confirmPassword" type="password" autoComplete="new-password" minLength={10} required className={fieldClass} />
+        </label>
+        <button disabled={busy} className={buttonClass}>{busy ? "Saving password…" : "Save new password"}</button>
       </form>
     </AuthFrame>
   );
 }
 
 export function PendingPage({ status = "pending" }: { status?: "pending" | "rejected" | "suspended" }) {
-  const { session, profile, signOut, loading } = useAuth();
+  const { session, profile, signOut, loading, refreshProfile } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const actualStatus = profile?.status === "rejected" || profile?.status === "suspended" || profile?.status === "pending" ? profile.status : status;
+
+  useEffect(() => {
+    if (!session || profile?.status !== "pending") return;
+    const timer = window.setInterval(() => void refreshProfile(), 30_000);
+    return () => window.clearInterval(timer);
+  }, [session, profile?.status, refreshProfile]);
+
+  async function checkStatus() {
+    setRefreshing(true);
+    setChecked(false);
+    await refreshProfile();
+    setRefreshing(false);
+    setChecked(true);
+  }
   if (!loading && !session) return <Redirect to="/login" />;
   if (!loading && profile?.status === "active")
     return <Redirect to="/dashboard" />;
   return (
     <AuthFrame
-      eyebrow={status === "suspended" ? "Access suspended" : status === "rejected" ? "Access declined" : "Approval pending"}
-      title={status === "pending" ? "Your account is being reviewed" : "Contact the owner"}
+      eyebrow={actualStatus === "suspended" ? "Access suspended" : actualStatus === "rejected" ? "Access declined" : "Approval pending"}
+      title={actualStatus === "pending" ? "Your account is being reviewed" : "Contact the owner"}
       description={
-        status === "suspended"
+        actualStatus === "suspended"
           ? "Your membership access has been suspended. Contact TheTradersCartel for assistance."
-          : status === "rejected"
+          : actualStatus === "rejected"
             ? "Your membership request was not approved. Contact TheTradersCartel if you believe this is a mistake."
             : "Your email is verified. The owner will review and activate your membership."
       }
     >
       <div className="border-t border-white/12 pt-7">
         <p className="text-sm text-white/55">{profile?.email}</p>
-        <button
-          onClick={() => signOut()}
-          className="mt-7 border border-white/15 px-5 py-3 text-xs uppercase tracking-wider text-white/60 hover:border-white/40 hover:text-white"
-        >
-          Sign out
-        </button>
+        {actualStatus === "pending" && <>
+          <button disabled={refreshing} onClick={() => void checkStatus()} className="mt-7 flex h-11 items-center gap-2 bg-white px-5 text-xs font-semibold uppercase tracking-wider text-black disabled:opacity-50">
+            <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />{refreshing ? "Checking…" : "Check approval status"}
+          </button>
+          {checked && <p role="status" className="mt-3 text-xs text-white/35">Still awaiting approval. This page also checks automatically.</p>}
+        </>}
+        <button onClick={() => signOut()} className="mt-5 border border-white/15 px-5 py-3 text-xs uppercase tracking-wider text-white/60 hover:border-white/40 hover:text-white">Sign out</button>
       </div>
     </AuthFrame>
   );

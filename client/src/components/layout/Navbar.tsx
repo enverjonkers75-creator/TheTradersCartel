@@ -61,6 +61,7 @@ export function Navbar() {
               {item.name}
             </a>
           ))}
+          <a href="/signup" className="ml-1 text-[11px] uppercase tracking-widest text-white/60 transition-colors duration-200 hover:text-white">Create account</a>
           <Button asChild variant="outline" size="sm" className="ml-2 border-white/60 text-white hover:bg-white hover:text-black rounded-none uppercase tracking-wide text-[11px] h-9 px-5">
             <a href="/login">Member sign in</a>
           </Button>
@@ -87,6 +88,7 @@ export function Navbar() {
                     {item.name}
                   </a>
                 ))}
+                <a href="/signup" className="text-sm uppercase tracking-[0.2em] text-white/60 transition-colors hover:text-white">Create account</a>
                 <Button asChild className="mt-4 bg-white text-black hover:bg-neutral-200 rounded-none uppercase tracking-wide w-full h-11 text-sm">
                   <a href="/login">Member sign in</a>
                 </Button>
