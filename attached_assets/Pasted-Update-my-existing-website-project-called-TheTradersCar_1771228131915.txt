@@ -1,0 +1,75 @@
+Update my existing website project called **TheTradersCartel**.
+Do NOT create a new project. Modify the current files.
+
+---
+
+### Tasks
+
+**1. Update the hero/branding section**
+
+Display exactly:
+
+Main heading:
+TheTradersCartel
+
+Directly underneath in smaller font:
+InvestInYourself
+
+Style requirements:
+
+* Centered
+* Clean dark premium look
+* White text on dark background
+* Mobile responsive
+
+---
+
+**2. Add or update the pricing section to show exactly**
+
+* In person Mentorship — R 2999
+* Video Conference Mentorship — R 1999
+* Seminars — R 499
+
+Requirements:
+
+* Each item must include a clear **Buy Now button**
+* Buttons must use placeholder links for now
+* Add clear code comments showing where I will paste my real payment links later
+* Keep the current site styling consistent
+* Must be mobile responsive
+
+---
+
+**3. Ensure purchase flow supports post-payment onboarding**
+
+Requirements:
+
+* Buy buttons should link to external payment URLs (placeholders for now)
+* After payment, users will be redirected externally to a Google Form (this will be configured in the payment provider)
+* Add comments explaining where to place the Google Form link
+* Do NOT embed the Google Form publicly on the page
+
+---
+
+**4. Add this legal disclaimer in the footer (exact text)**
+
+TheTradersCartel is a representative of Asher Global Group (Pty) Ltd, FSP License No. 54565. TheTradersCartel is rendering financial services under supervision. We accept responsibility for the activities performed by the representative within the scope of their mandate. Trading in derivatives is highly speculative and involves significant risk. It is intended only for individuals who fully understand and accept the risk of short-term market fluctuations and the potential for financial loss.
+
+Style requirements:
+
+* Small professional font
+* Centered
+* Proper spacing
+* Responsive
+* Must match current site theme
+
+---
+
+**5. General requirements**
+
+* Do NOT break the existing layout
+* Do NOT remove existing functionality
+* Keep current theme and styling
+* Clean, well-commented code
+* Fully mobile responsive
+* Production-ready quality

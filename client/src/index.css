@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Oswald', sans-serif;
+
+  --color-background: hsl(0 0% 0%);
+  --color-foreground: hsl(0 0% 90%); /* Slightly softened white */
+
+  --color-card: hsl(0 0% 5%);
+  --color-card-foreground: hsl(0 0% 100%);
+
+  --color-popover: hsl(0 0% 5%);
+  --color-popover-foreground: hsl(0 0% 100%);
+
+  --color-primary: hsl(0 0% 100%);
+  --color-primary-foreground: hsl(0 0% 0%);
+
+  --color-secondary: hsl(0 0% 15%);
+  --color-secondary-foreground: hsl(0 0% 100%);
+
+  --color-muted: hsl(0 0% 15%);
+  --color-muted-foreground: hsl(0 0% 60%);
+
+  --color-accent: hsl(0 0% 20%);
+  --color-accent-foreground: hsl(0 0% 100%);
+
+  --color-destructive: hsl(0 62% 30%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  --color-border: hsl(0 0% 20%);
+  --color-input: hsl(0 0% 20%);
+  --color-ring: hsl(0 0% 80%);
+
+  --radius: 0rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    min-height: 100vh;
+    @apply bg-transparent text-foreground font-sans;
+    overscroll-behavior: none;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-wide uppercase;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-linear-to-b from-white to-neutral-500;
+  }
+
+  .glass-nav {
+    @apply bg-black/50 backdrop-blur-xl border-b border-white/5;
+  }
+
+  .section-warp {
+    @apply transition-transform duration-700 ease-out;
+  }
+}
+
+@layer base {
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .animate-shimmer {
+    background-size: 200% 100%;
+    animation: shimmer 3s ease-in-out infinite;
+  }
+}
