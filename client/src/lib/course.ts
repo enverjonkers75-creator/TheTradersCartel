@@ -10,8 +10,23 @@ export type CourseLesson = {
 
 import { generatedCourseLessons } from "@/lib/course-manifest.generated";
 
-// These slots stay at the beginning of the member course. Add the final R2
-// storage keys here when the five summary videos are supplied.
+const howToAnalyseKey = "061-practical-analysis-how-to-analyse";
+const dailyBreakdownKey = "050-practical-analysis-daily-4h-breakdown";
+
+function moveExistingLessonToSummary(key: string, label: string, description: string): CourseLesson {
+  const lesson = generatedCourseLessons.find((item) => item.key === key);
+  if (!lesson) throw new Error(`Missing summary source lesson: ${key}`);
+  return {
+    ...lesson,
+    label,
+    description,
+    module: "Course Summary",
+    track: "summary",
+  };
+}
+
+// These slots stay at the beginning of the member course. The final two reuse
+// existing uploads; add the Chapter 1–3 storage keys when those files arrive.
 export const courseSummaryLessons: CourseLesson[] = [
   {
     key: "summary-chapter-1",
@@ -41,29 +56,27 @@ export const courseSummaryLessons: CourseLesson[] = [
     track: "summary",
   },
   {
-    key: "summary-how-to-analyse",
-    label: "Summary 04",
-    title: "How To Analyse",
-    description: "A practical summary of the complete analysis process.",
-    module: "Course Summary",
-    storageKey: null,
-    track: "summary",
+    ...moveExistingLessonToSummary(
+      howToAnalyseKey,
+      "Summary 04",
+      "A practical summary of the complete analysis process.",
+    ),
   },
   {
-    key: "summary-daily-4h-breakdown",
-    label: "Summary 05",
-    title: "Daily & 4H Breakdown",
-    description: "A focused walkthrough of the daily and four-hour market breakdown.",
-    module: "Course Summary",
-    storageKey: null,
-    track: "summary",
+    ...moveExistingLessonToSummary(
+      dailyBreakdownKey,
+      "Summary 05",
+      "A focused walkthrough of the daily and four-hour market breakdown.",
+    ),
   },
 ];
 
 // Generated lesson keys remain unchanged so existing member progress is kept.
 export const courseLessons: CourseLesson[] = [
   ...courseSummaryLessons,
-  ...generatedCourseLessons.map((lesson) => ({ ...lesson, track: "course" as const })),
+  ...generatedCourseLessons
+    .filter((lesson) => lesson.key !== howToAnalyseKey && lesson.key !== dailyBreakdownKey)
+    .map((lesson) => ({ ...lesson, track: "course" as const })),
 ];
 
 export function isCourseLessonUnlocked(index: number, completedKeys: Set<string>) {

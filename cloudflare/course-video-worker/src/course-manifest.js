@@ -262,10 +262,10 @@ export const LESSONS = {
   },
   "050-practical-analysis-daily-4h-breakdown": {
     "storageKey": "course-v1/050-daily-4h-breakdown.mp4",
-    "previousKey": "060-fundamentals-course-watch-once-done-with-course"
+    "previousKey": "061-practical-analysis-how-to-analyse"
   },
   "061-practical-analysis-how-to-analyse": {
     "storageKey": "course-v1/061-how-to-analyse.mp4",
-    "previousKey": "050-practical-analysis-daily-4h-breakdown"
+    "previousKey": null
   }
 };

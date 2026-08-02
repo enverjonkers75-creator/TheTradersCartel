@@ -152,6 +152,10 @@ const workerLessons = Object.fromEntries(orderedLessons.map((lesson, index) => [
   storageKey: lesson.storageKey,
   previousKey: index === 0 ? null : orderedLessons[index - 1].key,
 }]));
+// These two existing videos are presented in the Course Summary module rather
+// than at the end of the full course. Keep this playback order when regenerating.
+workerLessons["061-practical-analysis-how-to-analyse"].previousKey = null;
+workerLessons["050-practical-analysis-daily-4h-breakdown"].previousKey = "061-practical-analysis-how-to-analyse";
 const workerManifest = `// Generated from the course drive. Do not edit manually.\nexport const LESSONS = ${JSON.stringify(workerLessons, null, 2)};\n`;
 
 writeFileSync(resolve("client/src/lib/course-manifest.generated.ts"), clientManifest);

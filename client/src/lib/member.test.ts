@@ -82,6 +82,16 @@ describe("course sequencing", () => {
     expect(isCourseLessonUnlocked(firstCourseIndex + 2, completed)).toBe(false);
   });
 
+  it("moves the two practical videos into summary without duplicating them", () => {
+    for (const title of ["How To Analyse", "Daily & 4H Breakdown"]) {
+      const matches = courseLessons.filter((lesson) => lesson.title === title);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].module).toBe("Course Summary");
+      expect(matches[0].storageKey).toMatch(/^course-v1\//);
+    }
+    expect(courseLessons.some((lesson) => lesson.module === "Practical Analysis")).toBe(false);
+  });
+
   it("ignores unknown progress when calculating completion", () => {
     const firstAvailable = courseLessons.find((lesson) => lesson.storageKey)!;
     expect(getCourseCompletion(new Set([firstAvailable.key, "removed-lesson"]))).toEqual({
