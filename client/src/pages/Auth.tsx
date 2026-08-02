@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, RefreshCw } from "lucide-react";
-import { passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
+import { authCallbackOrigin, passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import mentorshipGroup from "@/assets/mentorship-group.png";
 
@@ -136,7 +136,7 @@ export function LoginPage() {
     const { error: resendError } = await supabase.auth.resend({
       type: "signup",
       email: unverifiedEmail,
-      options: { emailRedirectTo: `${window.location.origin}/pending` },
+      options: { emailRedirectTo: `${authCallbackOrigin}/pending` },
     });
     setResendBusy(false);
     if (resendError) return setError(readableAuthError(resendError.message));
@@ -233,7 +233,7 @@ export function SignupPage() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/pending`,
+        emailRedirectTo: `${authCallbackOrigin}/pending`,
       },
     });
     setBusy(false);
@@ -332,7 +332,7 @@ export function ForgotPasswordPage() {
     const form = new FormData(event.currentTarget);
     const { error: authError } = await supabase.auth.resetPasswordForEmail(
       String(form.get("email")).trim().toLowerCase(),
-      { redirectTo: `${window.location.origin}/reset-password` },
+      { redirectTo: `${authCallbackOrigin}/reset-password` },
     );
     setBusy(false);
     if (authError) setError(readableAuthError(authError.message));
