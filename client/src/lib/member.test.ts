@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateAnalytics, calculateCumulativePnl, calculateEquityCurve, calculateQuickJournalAnalytics, calculateTradeMetrics, groupForZarBalance, validateJournalScreenshot } from "@shared/member";
 import { courseLessons, courseSummaryLessons, getCourseCompletion, isCourseLessonUnlocked } from "@/lib/course";
-import { leaderboardFeed } from "@/lib/leaderboard";
+import { competitionRules, leaderboardFeed, leaderboardFeeds, rankCompetition } from "@/lib/leaderboard";
 import { formatMemberActivity, isMemberOnline } from "@/lib/presence";
 
 describe("groupForZarBalance", () => {
@@ -131,6 +131,35 @@ describe("leaderboard preview feed", () => {
   it("stays ranked by return until the live API replaces it", () => {
     expect(leaderboardFeed.status).toBe("preview");
     expect(leaderboardFeed.entries.map((entry) => entry.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(leaderboardFeed.entries.every((entry, index, entries) => index === 0 || entries[index - 1].returnPercent >= entry.returnPercent)).toBe(true);
+    const eligible = leaderboardFeed.entries.filter((entry) => entry.status === "eligible");
+    expect(eligible.every((entry, index, entries) => index === 0 || entries[index - 1].returnPercent >= entry.returnPercent)).toBe(true);
+  });
+
+  it("moves breached accounts below every eligible account", () => {
+    const eligible = leaderboardFeed.entries.filter((entry) => entry.status === "eligible");
+    const breached = leaderboardFeed.entries.filter((entry) => entry.status === "breached");
+    expect(eligible.length).toBeGreaterThan(0);
+    expect(breached.length).toBeGreaterThan(0);
+    expect(Math.max(...eligible.map((entry) => entry.rank))).toBeLessThan(Math.min(...breached.map((entry) => entry.rank)));
+  });
+
+  it("uses lowest overall drawdown as the return tie breaker", () => {
+    const base = { displayName: "Trader", initials: "TR", returnPercent: 10, maximumDailyDrawdownPercent: 2, maximumRiskPerTradePercent: 0.8, educationPoints: 0, seminarPoints: 0 };
+    const ranked = rankCompetition([
+      { ...base, id: "higher-dd", maximumOverallDrawdownPercent: 4 },
+      { ...base, id: "lower-dd", maximumOverallDrawdownPercent: 3 },
+    ]);
+    expect(ranked.map((entry) => entry.id)).toEqual(["lower-dd", "higher-dd"]);
+  });
+
+  it("applies all three competition limits", () => {
+    expect(competitionRules).toEqual({ maximumDailyDrawdownPercent: 5, maximumOverallDrawdownPercent: 10, maximumRiskPerTradePercent: 1 });
+  });
+
+  it("keeps real and demo competitors in separate feeds", () => {
+    expect(leaderboardFeeds.demo.accountType).toBe("demo");
+    expect(leaderboardFeeds.real.accountType).toBe("real");
+    expect(leaderboardFeeds.demo.entries.every((entry) => entry.id.startsWith("preview-"))).toBe(true);
+    expect(leaderboardFeeds.real.entries.every((entry) => entry.id.startsWith("real-preview-"))).toBe(true);
   });
 });
