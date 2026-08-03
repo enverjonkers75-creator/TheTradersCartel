@@ -25,8 +25,8 @@ function moveExistingLessonToSummary(key: string, label: string, description: st
   };
 }
 
-// These slots stay at the beginning of the member course. The final two reuse
-// existing uploads; add the Chapter 1–3 storage keys when those files arrive.
+// These summaries stay at the beginning of the member course. The final two
+// reuse existing uploads that were previously at the end of the full course.
 export const courseSummaryLessons: CourseLesson[] = [
   {
     key: "summary-chapter-1",
@@ -34,7 +34,7 @@ export const courseSummaryLessons: CourseLesson[] = [
     title: "Chapter 1 Summary",
     description: "A concise review of the key ideas covered in Chapter 1.",
     module: "Course Summary",
-    storageKey: null,
+    storageKey: "course-v1/summary-chapter-1.mp4",
     track: "summary",
   },
   {
@@ -43,7 +43,7 @@ export const courseSummaryLessons: CourseLesson[] = [
     title: "Chapter 2 Summary",
     description: "A concise review of the key ideas covered in Chapter 2.",
     module: "Course Summary",
-    storageKey: null,
+    storageKey: "course-v1/summary-chapter-2.mp4",
     track: "summary",
   },
   {
@@ -52,7 +52,7 @@ export const courseSummaryLessons: CourseLesson[] = [
     title: "Chapter 3 Summary",
     description: "A concise review of the key ideas covered in Chapter 3.",
     module: "Course Summary",
-    storageKey: null,
+    storageKey: "course-v1/summary-chapter-3.mp4",
     track: "summary",
   },
   {
@@ -86,7 +86,7 @@ export function isCourseLessonUnlocked(index: number, completedKeys: Set<string>
   const trackIndex = trackLessons.findIndex((item) => item.key === lesson.key);
   if (trackIndex <= 0) return true;
   const previous = trackLessons[trackIndex - 1];
-  // Empty summary slots stay browseable and never block the full course.
+  // Each track unlocks independently, so summaries never block the full course.
   return !previous.storageKey || completedKeys.has(previous.key);
 }
 

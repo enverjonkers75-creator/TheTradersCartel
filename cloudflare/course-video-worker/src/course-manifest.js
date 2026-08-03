@@ -266,6 +266,18 @@ export const LESSONS = {
   },
   "061-practical-analysis-how-to-analyse": {
     "storageKey": "course-v1/061-how-to-analyse.mp4",
+    "previousKey": "summary-chapter-3"
+  },
+  "summary-chapter-1": {
+    "storageKey": "course-v1/summary-chapter-1.mp4",
     "previousKey": null
+  },
+  "summary-chapter-2": {
+    "storageKey": "course-v1/summary-chapter-2.mp4",
+    "previousKey": "summary-chapter-1"
+  },
+  "summary-chapter-3": {
+    "storageKey": "course-v1/summary-chapter-3.mp4",
+    "previousKey": "summary-chapter-2"
   }
 };

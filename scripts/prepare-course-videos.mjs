@@ -152,9 +152,21 @@ const workerLessons = Object.fromEntries(orderedLessons.map((lesson, index) => [
   storageKey: lesson.storageKey,
   previousKey: index === 0 ? null : orderedLessons[index - 1].key,
 }]));
-// These two existing videos are presented in the Course Summary module rather
-// than at the end of the full course. Keep this playback order when regenerating.
-workerLessons["061-practical-analysis-how-to-analyse"].previousKey = null;
+// The summary track unlocks independently from the full course. Keep these
+// manually supplied summary videos and their order when regenerating manifests.
+workerLessons["summary-chapter-1"] = {
+  storageKey: "course-v1/summary-chapter-1.mp4",
+  previousKey: null,
+};
+workerLessons["summary-chapter-2"] = {
+  storageKey: "course-v1/summary-chapter-2.mp4",
+  previousKey: "summary-chapter-1",
+};
+workerLessons["summary-chapter-3"] = {
+  storageKey: "course-v1/summary-chapter-3.mp4",
+  previousKey: "summary-chapter-2",
+};
+workerLessons["061-practical-analysis-how-to-analyse"].previousKey = "summary-chapter-3";
 workerLessons["050-practical-analysis-daily-4h-breakdown"].previousKey = "061-practical-analysis-how-to-analyse";
 const workerManifest = `// Generated from the course drive. Do not edit manually.\nexport const LESSONS = ${JSON.stringify(workerLessons, null, 2)};\n`;
 

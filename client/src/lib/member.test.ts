@@ -68,11 +68,20 @@ describe("journal screenshot validation", () => {
 });
 
 describe("course sequencing", () => {
-  it("keeps empty summary slots browseable without blocking the full course", () => {
+  it("unlocks summaries in order without blocking the full course", () => {
     const completed = new Set<string>();
     expect(isCourseLessonUnlocked(0, completed)).toBe(true);
-    expect(isCourseLessonUnlocked(1, completed)).toBe(true);
+    expect(isCourseLessonUnlocked(1, completed)).toBe(false);
     expect(isCourseLessonUnlocked(courseSummaryLessons.length, completed)).toBe(true);
+
+    completed.add(courseSummaryLessons[0].key);
+    expect(isCourseLessonUnlocked(1, completed)).toBe(true);
+    expect(isCourseLessonUnlocked(2, completed)).toBe(false);
+  });
+
+  it("makes all five summary videos available", () => {
+    expect(courseSummaryLessons).toHaveLength(5);
+    expect(courseSummaryLessons.every((lesson) => lesson.storageKey?.startsWith("course-v1/"))).toBe(true);
   });
 
   it("unlocks full-course lessons in their original order", () => {
