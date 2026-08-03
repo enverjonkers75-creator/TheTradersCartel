@@ -10,6 +10,7 @@ const requestSchema = z.discriminatedUnion("action", [
     fullName: z.string().trim().min(2).max(120),
     website: z.string().max(0).optional(),
   }),
+  z.object({ action: z.literal("confirmation"), email: z.string().email().max(254) }),
   z.object({ action: z.literal("recovery"), email: z.string().email().max(254) }),
 ]);
 
@@ -100,6 +101,22 @@ export default async function handler(req: any, res: any) {
     }
 
     const email = parsed.data.email.trim().toLowerCase();
+    if (parsed.data.action === "confirmation") {
+      const { data, error } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+        options: { redirectTo: `${siteUrl}/pending` },
+      });
+      if (!error) {
+        await sendEmail(
+          email,
+          "Confirm your Traders Cartel account",
+          `<div style="background:#080808;color:#f5f5f5;padding:32px;font-family:Arial,sans-serif"><h1 style="font-size:24px">Confirm your email</h1><p>Confirm your email address to continue to membership approval.</p><p style="margin-top:28px"><a href="${escapeHtml(data.properties.action_link)}" style="display:inline-block;background:#fff;color:#000;padding:12px 18px;text-decoration:none;font-weight:700">Confirm email</a></p><p style="color:#888;font-size:12px;margin-top:24px">If you did not request this, you can ignore this email.</p></div>`,
+        );
+      }
+      return res.status(200).json({ success: true });
+    }
+
     const { data, error } = await admin.auth.admin.generateLink({
       type: "recovery",
       email,

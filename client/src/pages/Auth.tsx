@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, RefreshCw } from "lucide-react";
-import { authCallbackOrigin, passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
+import { passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import mentorshipGroup from "@/assets/mentorship-group.png";
 
@@ -133,13 +133,14 @@ export function LoginPage() {
     if (!unverifiedEmail) return;
     setResendBusy(true);
     setResendSent(false);
-    const { error: resendError } = await supabase.auth.resend({
-      type: "signup",
-      email: unverifiedEmail,
-      options: { emailRedirectTo: `${authCallbackOrigin}/pending` },
+    const response = await fetch("/api/auth-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "confirmation", email: unverifiedEmail }),
     });
+    const result = await response.json().catch(() => ({ message: "Confirmation email is temporarily unavailable." }));
     setResendBusy(false);
-    if (resendError) return setError(readableAuthError(resendError.message));
+    if (!response.ok) return setError(String(result.message || "Confirmation email is temporarily unavailable."));
     setResendSent(true);
   }
   return (
