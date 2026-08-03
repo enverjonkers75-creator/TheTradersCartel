@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, GraduationCap, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, Trophy, X } from "lucide-react";
+import { BookOpen, GraduationCap, LayoutDashboard, Link2, LogOut, Menu, Plus, ShieldCheck, Trophy, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -11,6 +11,7 @@ const memberItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Course", href: "/dashboard/course", icon: GraduationCap },
   { label: "Journal", href: "/dashboard/journal", icon: BookOpen },
+  { label: "Accounts", href: "/dashboard/accounts", icon: Link2 },
 ];
 
 function Brand() {
