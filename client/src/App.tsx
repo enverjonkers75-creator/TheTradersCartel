@@ -11,6 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import CoursePage from "@/pages/Course";
 import LeaderboardPage from "@/pages/Leaderboard";
 import AdminPage from "@/pages/Admin";
+import AdminMemberJournalPage from "@/pages/AdminMemberJournal";
 import { ForgotPasswordPage, LoginPage, PendingPage, ResetPasswordPage, SignupPage } from "@/pages/Auth";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute, PublicOnlyRoute } from "@/components/member/RouteGuards";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/dashboard/help"><Redirect to="/dashboard" /></Route>
       <Route path="/admin"><Redirect to="/admin/members" /></Route>
       <Route path="/admin/members"><ProtectedRoute admin><AdminPage /></ProtectedRoute></Route>
+      <Route path="/admin/members/:memberId/journal"><ProtectedRoute admin><AdminMemberJournalPage /></ProtectedRoute></Route>
       <Route component={NotFound} />
     </Switch>
   );
