@@ -7,9 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 
-const items = [
+const memberItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Leaderboard", href: "/dashboard/leaderboard", icon: Trophy },
   { label: "Course", href: "/dashboard/course", icon: GraduationCap },
   { label: "Journal", href: "/dashboard/journal", icon: BookOpen },
 ];
@@ -24,6 +23,9 @@ export function MemberLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const initials = profile?.full_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "TC";
   const admin = profile?.role === "owner" || profile?.role === "developer";
+  const items = admin
+    ? [...memberItems.slice(0, 1), { label: "Leaderboard", href: "/dashboard/leaderboard", icon: Trophy }, ...memberItems.slice(1)]
+    : memberItems;
 
   useEffect(() => {
     if (!profile || profile.status !== "active") return;

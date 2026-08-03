@@ -29,7 +29,7 @@ function Router() {
       <Route path="/suspended"><PendingPage status="suspended" /></Route>
       <Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
       <Route path="/dashboard/course"><ProtectedRoute><CoursePage /></ProtectedRoute></Route>
-      <Route path="/dashboard/leaderboard"><ProtectedRoute><LeaderboardPage /></ProtectedRoute></Route>
+      <Route path="/dashboard/leaderboard"><ProtectedRoute admin><LeaderboardPage /></ProtectedRoute></Route>
       <Route path="/dashboard/journal"><ProtectedRoute><JournalPage /></ProtectedRoute></Route>
       <Route path="/dashboard/education"><Redirect to="/dashboard/course" /></Route>
       <Route path="/dashboard/analytics"><Redirect to="/dashboard" /></Route>
