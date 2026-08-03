@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, GraduationCap, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, X } from "lucide-react";
+import { BookOpen, GraduationCap, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, Trophy, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -9,6 +9,7 @@ import { queryClient } from "@/lib/queryClient";
 
 const items = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Leaderboard", href: "/dashboard/leaderboard", icon: Trophy },
   { label: "Course", href: "/dashboard/course", icon: GraduationCap },
   { label: "Journal", href: "/dashboard/journal", icon: BookOpen },
 ];
