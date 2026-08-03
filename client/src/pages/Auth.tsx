@@ -228,16 +228,14 @@ export function SignupPage() {
       setBusy(false);
       return setError("Enter your full name.");
     }
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: `${authCallbackOrigin}/pending`,
-      },
+    const response = await fetch("/api/auth-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "signup", email, password, fullName, website: String(form.get("website") || "") }),
     });
+    const result = await response.json().catch(() => ({ message: "Registration is temporarily unavailable." }));
     setBusy(false);
-    if (authError) return setError(readableAuthError(authError.message));
+    if (!response.ok) return setError(String(result.message || "Registration is temporarily unavailable."));
     setSubmitted(true);
   }
   if (submitted)
@@ -269,6 +267,7 @@ export function SignupPage() {
     >
       <form onSubmit={submit} className="space-y-5">
         {error && <ErrorMessage message={error} />}
+        <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
         <label className={labelClass}>
           Full name
           <input name="fullName" required className={fieldClass} />
@@ -330,12 +329,14 @@ export function ForgotPasswordPage() {
     setBusy(true);
     setError("");
     const form = new FormData(event.currentTarget);
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(
-      String(form.get("email")).trim().toLowerCase(),
-      { redirectTo: `${authCallbackOrigin}/reset-password` },
-    );
+    const response = await fetch("/api/auth-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "recovery", email: String(form.get("email")).trim().toLowerCase() }),
+    });
+    const result = await response.json().catch(() => ({ message: "Password recovery is temporarily unavailable." }));
     setBusy(false);
-    if (authError) setError(readableAuthError(authError.message));
+    if (!response.ok) setError(String(result.message || "Password recovery is temporarily unavailable."));
     else setSent(true);
   }
   return (
