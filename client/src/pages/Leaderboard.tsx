@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, Medal, PlugZap, Trophy } from "lucide-react";
+import { Activity, Medal, Trophy } from "lucide-react";
 import { MemberLayout } from "@/components/member/MemberLayout";
 import { leaderboardFeed, type LeaderboardEntry, type LeaderboardPeriod } from "@/lib/leaderboard";
 
@@ -52,11 +52,6 @@ export default function LeaderboardPage() {
           <div className="flex w-fit border border-white/10 bg-white/[0.025] p-1">
             {(["week", "month"] as const).map((value) => <button key={value} onClick={() => setPeriod(value)} className={`px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] transition ${period === value ? "bg-white text-black" : "text-white/35 hover:text-white/70"}`}>This {value}</button>)}
           </div>
-        </div>
-
-        <div className="mt-7 flex items-start gap-3 border-y border-white/[0.08] bg-white/[0.018] px-4 py-4 sm:px-5">
-          <PlugZap className="mt-0.5 size-4 shrink-0 text-white/38" />
-          <div><p className="text-xs font-medium text-white/65">Live activity will activate when the trading API is connected.</p><p className="mt-1 text-[10px] leading-5 text-white/26">These names and figures are private design previews. Members cannot access this page.</p></div>
         </div>
 
         <section className="mt-11">
