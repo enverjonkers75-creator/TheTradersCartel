@@ -33,7 +33,9 @@ export default function CoursePage() {
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [playbackNonce, setPlaybackNonce] = useState(0);
+  const [playbackShielded, setPlaybackShielded] = useState(false);
   const { toast } = useToast();
+  const captureProtectionEnabled = profile?.role === "student";
 
   const progressByLesson = useMemo(
     () => new Map(progress.map((item) => [item.lesson_key, item])),
@@ -110,6 +112,57 @@ export default function CoursePage() {
     return () => { cancelled = true; };
   }, [activeLesson.key, activeLesson.storageKey, playbackNonce]);
 
+  useEffect(() => {
+    if (!captureProtectionEnabled) {
+      setPlaybackShielded(false);
+      return;
+    }
+
+    let restoreTimer: number | undefined;
+    const shieldPlayback = () => {
+      window.clearTimeout(restoreTimer);
+      setPlaybackShielded(true);
+      videoRef.current?.pause();
+    };
+    const restorePlayback = () => {
+      window.clearTimeout(restoreTimer);
+      restoreTimer = window.setTimeout(() => {
+        if (document.visibilityState === "visible" && document.hasFocus()) {
+          setPlaybackShielded(false);
+        }
+      }, 650);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") shieldPlayback();
+      else restorePlayback();
+    };
+    const handleCaptureShortcut = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const macCapture = event.metaKey && event.shiftKey && ["3", "4", "5"].includes(key);
+      const windowsCapture = key === "printscreen" || (event.metaKey && event.shiftKey && key === "s");
+      if (!macCapture && !windowsCapture) return;
+      event.preventDefault();
+      shieldPlayback();
+      restoreTimer = window.setTimeout(() => setPlaybackShielded(false), 1800);
+    };
+
+    window.addEventListener("blur", shieldPlayback);
+    window.addEventListener("focus", restorePlayback);
+    window.addEventListener("keydown", handleCaptureShortcut, true);
+    window.addEventListener("beforeprint", shieldPlayback);
+    window.addEventListener("afterprint", restorePlayback);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.clearTimeout(restoreTimer);
+      window.removeEventListener("blur", shieldPlayback);
+      window.removeEventListener("focus", restorePlayback);
+      window.removeEventListener("keydown", handleCaptureShortcut, true);
+      window.removeEventListener("beforeprint", shieldPlayback);
+      window.removeEventListener("afterprint", restorePlayback);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [captureProtectionEnabled]);
+
   const previousLesson = activeIndex > 0 ? courseLessons[activeIndex - 1] : null;
   const nextLesson = courseLessons[activeIndex + 1] ?? null;
   const nextUnlocked = nextLesson ? isCourseLessonUnlocked(activeIndex + 1, completedKeys) : false;
@@ -166,7 +219,11 @@ export default function CoursePage() {
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.22 }}
               >
-                <div className="relative aspect-video overflow-hidden border border-white/[0.09] bg-black shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+                <div
+                  className="relative aspect-video select-none overflow-hidden border border-white/[0.09] bg-black shadow-[0_24px_80px_rgba(0,0,0,0.45)] print:border-0 print:bg-black"
+                  onContextMenu={(event) => captureProtectionEnabled && event.preventDefault()}
+                  onDragStart={(event) => captureProtectionEnabled && event.preventDefault()}
+                >
                   <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent" />
                   {playbackUrl ? (
                     <video
@@ -177,7 +234,9 @@ export default function CoursePage() {
                       controlsList="nodownload noplaybackrate noremoteplayback"
                       disablePictureInPicture
                       disableRemotePlayback
-                      className="h-full w-full bg-black object-contain"
+                      playsInline
+                      preload="metadata"
+                      className={`h-full w-full bg-black object-contain print:invisible ${playbackShielded ? "invisible" : "visible"}`}
                       onContextMenu={(event) => event.preventDefault()}
                       onLoadedMetadata={(event) => {
                         const resumeAt = progressByLesson.get(activeLesson.key)?.watched_seconds ?? 0;
@@ -222,6 +281,23 @@ export default function CoursePage() {
                         <div className="mx-auto grid size-16 place-items-center rounded-full border border-white/15 bg-white/[0.04]"><Play className="ml-1 size-6 text-white/55" /></div>
                         <p className="mt-5 text-sm font-medium text-white/70">Video slot ready</p>
                         <p className="mt-1 text-xs text-white/30">The course video will appear here once uploaded.</p>
+                      </div>
+                    </div>
+                  )}
+                  {captureProtectionEnabled && playbackShielded && (
+                    <div className="absolute inset-0 z-20 grid place-items-center bg-black px-6 text-center" aria-live="polite">
+                      <div>
+                        <LockKeyhole className="mx-auto size-7 text-white/45" />
+                        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Protected playback paused</p>
+                        <p className="mt-2 text-[11px] text-white/30">Return to this course window to continue.</p>
+                      </div>
+                    </div>
+                  )}
+                  {captureProtectionEnabled && (
+                    <div className="absolute inset-0 z-30 hidden place-items-center bg-black text-center print:grid">
+                      <div>
+                        <LockKeyhole className="mx-auto size-7 text-white/45" />
+                        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Protected member content</p>
                       </div>
                     </div>
                   )}
