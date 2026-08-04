@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, RefreshCw } from "lucide-react";
-import { passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
+import { authCallbackOrigin, passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import mentorshipGroup from "@/assets/mentorship-group.png";
 
@@ -99,6 +99,8 @@ function readableAuthError(message: string) {
   const normalized = message.toLowerCase();
   if (normalized.includes("invalid login credentials")) return "The email or password is incorrect.";
   if (normalized.includes("email not confirmed")) return "Confirm your email before signing in.";
+  if (normalized.includes("user already registered") || normalized.includes("already been registered")) return "An account already exists for this email. Sign in or reset your password.";
+  if (normalized.includes("email rate limit")) return "Too many emails were requested. Wait a few minutes and try again.";
   if (normalized.includes("rate limit")) return "Too many attempts. Wait a few minutes and try again.";
   return message;
 }
@@ -133,14 +135,13 @@ export function LoginPage() {
     if (!unverifiedEmail) return;
     setResendBusy(true);
     setResendSent(false);
-    const response = await fetch("/api/auth-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "confirmation", email: unverifiedEmail }),
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email: unverifiedEmail,
+      options: { emailRedirectTo: `${authCallbackOrigin}/pending` },
     });
-    const result = await response.json().catch(() => ({ message: "Confirmation email is temporarily unavailable." }));
     setResendBusy(false);
-    if (!response.ok) return setError(String(result.message || "Confirmation email is temporarily unavailable."));
+    if (resendError) return setError(readableAuthError(resendError.message));
     setResendSent(true);
   }
   return (
@@ -229,14 +230,16 @@ export function SignupPage() {
       setBusy(false);
       return setError("Enter your full name.");
     }
-    const response = await fetch("/api/auth-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "signup", email, password, fullName, website: String(form.get("website") || "") }),
+    const { error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName },
+        emailRedirectTo: `${authCallbackOrigin}/pending`,
+      },
     });
-    const result = await response.json().catch(() => ({ message: "Registration is temporarily unavailable." }));
     setBusy(false);
-    if (!response.ok) return setError(String(result.message || "Registration is temporarily unavailable."));
+    if (authError) return setError(readableAuthError(authError.message));
     setSubmitted(true);
   }
   if (submitted)
@@ -330,14 +333,11 @@ export function ForgotPasswordPage() {
     setBusy(true);
     setError("");
     const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/auth-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "recovery", email: String(form.get("email")).trim().toLowerCase() }),
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(String(form.get("email")).trim().toLowerCase(), {
+      redirectTo: `${authCallbackOrigin}/reset-password`,
     });
-    const result = await response.json().catch(() => ({ message: "Password recovery is temporarily unavailable." }));
     setBusy(false);
-    if (!response.ok) setError(String(result.message || "Password recovery is temporarily unavailable."));
+    if (authError) setError(readableAuthError(authError.message));
     else setSent(true);
   }
   return (
