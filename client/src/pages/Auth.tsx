@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, RefreshCw } from "lucide-react";
-import { passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
+import { authCallbackOrigin, passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import mentorshipGroup from "@/assets/mentorship-group.png";
 
@@ -303,15 +303,43 @@ export function SignupPage() {
 }
 
 export function ForgotPasswordPage() {
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email")).trim().toLowerCase();
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${authCallbackOrigin}/reset-password`,
+    });
+    setBusy(false);
+    if (authError) return setError(readableAuthError(authError.message));
+    setSent(true);
+  }
   return (
     <AuthFrame
       eyebrow="Account recovery"
       title="Reset your password"
-      description="Email delivery is disabled. Contact the owner or developer to reset your password securely."
+      description="Request a secure password reset link for your registered email."
     >
-      <div className="border-t border-white/12 pt-7">
-        <p className="text-sm leading-6 text-white/55">For security, password resets are handled by the owner or developer while the no-email membership flow is active.</p>
-      </div>
+      {sent ? (
+        <div className="border-t border-white/12 pt-7">
+          <CheckCircle2 className="size-7" />
+          <p className="mt-4 text-sm leading-6 text-white/55">If that account exists, a password reset link has been sent. Check your inbox and spam folder.</p>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-5">
+          {error && <ErrorMessage message={error} />}
+          <label className={labelClass}>
+            Email
+            <input name="email" type="email" autoComplete="email" required className={fieldClass} />
+          </label>
+          <button disabled={busy} className={buttonClass}>{busy ? "Sending reset link…" : "Send reset link"}</button>
+        </form>
+      )}
       <Link
         href="/login"
         className="mt-7 flex items-center gap-2 text-xs text-white/45"
