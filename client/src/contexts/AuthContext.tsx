@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
@@ -13,33 +13,81 @@ type AuthValue = {
 };
 
 const AuthContext = createContext<AuthValue | null>(null);
+const PROFILE_RETRY_DELAYS = [0, 250, 750, 1500] as const;
+
+const wait = (milliseconds: number) => new Promise<void>((resolve) => {
+  window.setTimeout(resolve, milliseconds);
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const profileRequest = useRef(0);
 
   const loadProfile = useCallback(async (nextSession: Session | null) => {
+    const requestId = ++profileRequest.current;
     if (!nextSession?.user) { setProfile(null); return; }
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", nextSession.user.id).single();
-    if (error) throw error;
-    setProfile(data as Profile);
+
+    let lastError: unknown = new Error("Profile is not ready yet");
+    for (let attempt = 0; attempt < PROFILE_RETRY_DELAYS.length; attempt += 1) {
+      if (PROFILE_RETRY_DELAYS[attempt] > 0) await wait(PROFILE_RETRY_DELAYS[attempt]);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", nextSession.user.id)
+        .maybeSingle();
+
+      if (data) {
+        if (requestId === profileRequest.current) setProfile(data as Profile);
+        return;
+      }
+      lastError = error ?? lastError;
+    }
+
+    if (requestId === profileRequest.current) setProfile(null);
+    throw lastError;
   }, []);
 
-  const refreshProfile = useCallback(async () => loadProfile(session), [loadProfile, session]);
+  const refreshProfile = useCallback(async () => {
+    try {
+      await loadProfile(session);
+    } catch {
+      // A newly-created profile can take a moment to appear after email confirmation.
+      // Route guards keep the member in the safe pending state until the next refresh.
+      setProfile(null);
+    }
+  }, [loadProfile, session]);
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(async ({ data }) => {
+    supabase.auth.getSession().then(async ({ data, error }) => {
       if (!active) return;
+      if (error) {
+        setSession(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
       setSession(data.session);
-      try { await loadProfile(data.session); } finally { if (active) setLoading(false); }
+      try { await loadProfile(data.session); }
+      catch { if (active) setProfile(null); }
+      finally { if (active) setLoading(false); }
+    }).catch(() => {
+      if (!active) return;
+      setSession(null);
+      setProfile(null);
+      setLoading(false);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) return;
       setLoading(true);
       setSession(nextSession);
-      window.setTimeout(() => loadProfile(nextSession).catch(() => setProfile(null)).finally(() => setLoading(false)), 0);
+      window.setTimeout(() => {
+        void loadProfile(nextSession)
+          .catch(() => setProfile(null))
+          .finally(() => setLoading(false));
+      }, 0);
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [loadProfile]);
