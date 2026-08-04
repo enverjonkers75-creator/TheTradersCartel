@@ -9,6 +9,8 @@ import GalleryPage from "@/pages/Gallery";
 import JournalPage from "@/pages/Journal";
 import Dashboard from "@/pages/Dashboard";
 import CoursePage from "@/pages/Course";
+import LeaderboardPage from "@/pages/Leaderboard";
+import TradingAccountsPage from "@/pages/TradingAccounts";
 import AdminPage from "@/pages/Admin";
 import AdminMemberJournalPage from "@/pages/AdminMemberJournal";
 import { ForgotPasswordPage, LoginPage, PendingPage, ResetPasswordPage, SignupPage } from "@/pages/Auth";
@@ -29,8 +31,8 @@ function Router() {
       <Route path="/suspended"><PendingPage status="suspended" /></Route>
       <Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
       <Route path="/dashboard/course"><ProtectedRoute><CoursePage /></ProtectedRoute></Route>
-      <Route path="/dashboard/accounts"><Redirect to="/dashboard" /></Route>
-      <Route path="/dashboard/leaderboard"><Redirect to="/dashboard" /></Route>
+      <Route path="/dashboard/accounts"><ProtectedRoute><TradingAccountsPage /></ProtectedRoute></Route>
+      <Route path="/dashboard/leaderboard"><ProtectedRoute admin><LeaderboardPage /></ProtectedRoute></Route>
       <Route path="/dashboard/journal"><ProtectedRoute><JournalPage /></ProtectedRoute></Route>
       <Route path="/dashboard/education"><Redirect to="/dashboard/course" /></Route>
       <Route path="/dashboard/analytics"><Redirect to="/dashboard" /></Route>

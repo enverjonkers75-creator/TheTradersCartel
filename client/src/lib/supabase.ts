@@ -1,10 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-// Prefer the legacy anon key when both are present. It is supported by every
-// Supabase JS version in use here and prevents an accidentally stale
-// publishable-key variable from taking authentication offline.
-const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string | undefined;
+const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
 
 // Authentication emails must always return to the public site. Using
 // window.location.origin here makes confirmation links point at localhost or
