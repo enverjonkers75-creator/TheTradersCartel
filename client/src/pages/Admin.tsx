@@ -54,19 +54,7 @@ export default function AdminPage() {
     const { error: rpcError } = await supabase.rpc("set_member_status", { target_user: member.id, next_status: next });
     setBusyId("");
     if (rpcError) return setMessage(rpcError.message);
-    let emailSent = false;
-    if (next === "active") {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
-        const response = await fetch("/api/membership-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` },
-          body: JSON.stringify({ action: "approved", targetUser: member.id }),
-        });
-        emailSent = response.ok;
-      }
-    }
-    setMessage(`${member.full_name || member.email} is now ${next}.${next === "active" ? emailSent ? " Their approval email was sent." : " Approval succeeded, but the email sender is not connected yet." : ""}`);
+    setMessage(`${member.full_name || member.email} is now ${next}. They can sign in immediately after approval.`);
     await queryClient.invalidateQueries({ queryKey: ["admin-members"] });
   }
 

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, RefreshCw } from "lucide-react";
-import { authCallbackOrigin, passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
+import { passwordRecoveryLinkDetected, supabase, supabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import mentorshipGroup from "@/assets/mentorship-group.png";
 
@@ -98,46 +98,17 @@ function validatePassword(password: string) {
 function readableAuthError(message: string) {
   const normalized = message.toLowerCase();
   if (normalized.includes("invalid login credentials")) return "The email or password is incorrect.";
-  if (normalized.includes("email not confirmed")) return "Confirm your email before signing in.";
+  if (normalized.includes("email not confirmed")) return "Your account is not ready yet. Contact the owner to activate it.";
   if (normalized.includes("user already registered") || normalized.includes("already been registered")) return "An account already exists for this email. Sign in or reset your password.";
-  if (normalized.includes("email rate limit")) return "Confirmation emails are temporarily rate-limited. Please wait before retrying. The site owner must enable production SMTP before opening registration to high traffic.";
+  if (normalized.includes("email rate limit")) return "Email delivery is disabled for this membership flow. Please try again shortly or contact the owner.";
   if (normalized.includes("rate limit")) return "Too many attempts. Wait a few minutes and try again.";
   return message;
-}
-
-const EMAIL_COOLDOWN_MS = 60_000;
-const EMAIL_RATE_LIMIT_COOLDOWN_MS = 10 * 60_000;
-const emailCooldownKey = (action: string, email: string) => `ttc-auth-email-cooldown:${action}:${email}`;
-
-function getEmailCooldown(action: string, email: string) {
-  try {
-    const until = Number(window.localStorage.getItem(emailCooldownKey(action, email)) || 0);
-    return Number.isFinite(until) ? Math.max(0, until - Date.now()) : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function setEmailCooldown(action: string, email: string, duration = EMAIL_COOLDOWN_MS) {
-  try { window.localStorage.setItem(emailCooldownKey(action, email), String(Date.now() + duration)); } catch { /* storage may be disabled */ }
-}
-
-function clearEmailCooldown(action: string, email: string) {
-  try { window.localStorage.removeItem(emailCooldownKey(action, email)); } catch { /* storage may be disabled */ }
-}
-
-function cooldownMessage(milliseconds: number) {
-  const seconds = Math.max(1, Math.ceil(milliseconds / 1000));
-  return `A confirmation request was already sent. Please wait ${seconds} seconds before trying again.`;
 }
 
 export function LoginPage() {
   const [, setLocation] = useLocation();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [unverifiedEmail, setUnverifiedEmail] = useState("");
-  const [resendBusy, setResendBusy] = useState(false);
-  const [resendSent, setResendSent] = useState(false);
   const passwordReset = new URLSearchParams(window.location.search).get("reset") === "success";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -151,32 +122,11 @@ export function LoginPage() {
     });
     setBusy(false);
     if (authError) {
-      if (authError.message.toLowerCase().includes("email not confirmed")) setUnverifiedEmail(email);
       return setError(readableAuthError(authError.message));
     }
     setLocation("/dashboard");
   }
 
-  async function resendConfirmation() {
-    if (!unverifiedEmail) return;
-    const cooldown = getEmailCooldown("confirmation", unverifiedEmail);
-    if (cooldown > 0) return setError(cooldownMessage(cooldown));
-    setResendBusy(true);
-    setResendSent(false);
-    setEmailCooldown("confirmation", unverifiedEmail);
-    const { error: resendError } = await supabase.auth.resend({
-      type: "signup",
-      email: unverifiedEmail,
-      options: { emailRedirectTo: `${authCallbackOrigin}/pending` },
-    });
-    setResendBusy(false);
-    if (resendError) {
-      if (resendError.message.toLowerCase().includes("rate limit")) setEmailCooldown("confirmation", unverifiedEmail, EMAIL_RATE_LIMIT_COOLDOWN_MS);
-      else clearEmailCooldown("confirmation", unverifiedEmail);
-      return setError(readableAuthError(resendError.message));
-    }
-    setResendSent(true);
-  }
   return (
     <AuthFrame
       eyebrow="Member access"
@@ -189,12 +139,6 @@ export function LoginPage() {
         )}
         {passwordReset && <p role="status" className="border-l border-emerald-400/60 pl-3 text-xs leading-5 text-emerald-200/80">Password updated. You can sign in with your new password.</p>}
         {error && <ErrorMessage message={error} />}
-        {unverifiedEmail && (
-          <button type="button" disabled={resendBusy || resendSent} onClick={() => void resendConfirmation()} className="flex items-center gap-2 text-xs text-white/55 transition hover:text-white disabled:opacity-50">
-            <RefreshCw className={`size-3.5 ${resendBusy ? "animate-spin" : ""}`} />
-            {resendSent ? "Confirmation email sent" : resendBusy ? "Sending confirmation…" : "Resend confirmation email"}
-          </button>
-        )}
         <label className={labelClass}>
           Email
           <input
@@ -263,24 +207,15 @@ export function SignupPage() {
       setBusy(false);
       return setError("Enter your full name.");
     }
-    const cooldown = getEmailCooldown("signup", email);
-    if (cooldown > 0) {
-      setBusy(false);
-      return setError(cooldownMessage(cooldown));
-    }
-    setEmailCooldown("signup", email);
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${authCallbackOrigin}/pending`,
       },
     });
     setBusy(false);
     if (authError) {
-      if (authError.message.toLowerCase().includes("rate limit")) setEmailCooldown("signup", email, EMAIL_RATE_LIMIT_COOLDOWN_MS);
-      else if (!authError.message.toLowerCase().includes("already registered")) clearEmailCooldown("signup", email);
       return setError(readableAuthError(authError.message));
     }
     setSubmitted(true);
@@ -289,13 +224,13 @@ export function SignupPage() {
     return (
       <AuthFrame
         eyebrow="Thank you for joining"
-        title="Confirm your email, then wait for approval"
-        description="Your account has been created. Check your inbox and confirm your email address so the owner can review your membership."
+        title="Thank you. Your account is awaiting approval"
+        description="Your account has been created. The owner or developer will review it from the private member approvals page."
       >
         <div className="border-t border-white/12 pt-7">
           <CheckCircle2 className="size-7 text-white" />
           <p className="mt-4 text-sm leading-6 text-white/55">
-            Thank you. After confirming your email, sign in and you will see the approval waiting page.
+            Thank you. Your account is ready and will unlock automatically after approval. No email confirmation is required.
           </p>
           <Link
             href="/login"
@@ -368,44 +303,15 @@ export function SignupPage() {
 }
 
 export function ForgotPasswordPage() {
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    const form = new FormData(event.currentTarget);
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(String(form.get("email")).trim().toLowerCase(), {
-      redirectTo: `${authCallbackOrigin}/reset-password`,
-    });
-    setBusy(false);
-    if (authError) setError(readableAuthError(authError.message));
-    else setSent(true);
-  }
   return (
     <AuthFrame
       eyebrow="Account recovery"
       title="Reset your password"
-      description="We will send a secure reset link to your registered email."
+      description="Email delivery is disabled. Contact the owner or developer to reset your password securely."
     >
-      {sent ? (
-        <div>
-          <CheckCircle2 className="size-7" />
-          <p className="mt-4 text-sm text-white/50">
-            Check your inbox for the reset link.
-          </p>
-        </div>
-      ) : (
-        <form onSubmit={submit} className="space-y-5">
-          {error && <ErrorMessage message={error} />}
-          <label className={labelClass}>
-            Email
-            <input name="email" type="email" autoComplete="email" required className={fieldClass} />
-          </label>
-          <button disabled={busy} className={buttonClass}>{busy ? "Sending reset link…" : "Send reset link"}</button>
-        </form>
-      )}
+      <div className="border-t border-white/12 pt-7">
+        <p className="text-sm leading-6 text-white/55">For security, password resets are handled by the owner or developer while the no-email membership flow is active.</p>
+      </div>
       <Link
         href="/login"
         className="mt-7 flex items-center gap-2 text-xs text-white/45"
@@ -519,19 +425,6 @@ export function PendingPage({ status = "pending" }: { status?: "pending" | "reje
     return () => window.clearInterval(timer);
   }, [session, profile?.status, refreshProfile]);
 
-  useEffect(() => {
-    if (!session || !profile || profile.status !== "pending") return;
-    const notificationKey = `member-owner-notified:${profile.id}`;
-    if (window.localStorage.getItem(notificationKey)) return;
-    fetch("/api/membership-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ action: "pending" }),
-    }).then((response) => {
-      if (response.ok) window.localStorage.setItem(notificationKey, "true");
-    }).catch(() => undefined);
-  }, [session, profile]);
-
   async function checkStatus() {
     setRefreshing(true);
     setChecked(false);
@@ -551,7 +444,7 @@ export function PendingPage({ status = "pending" }: { status?: "pending" | "reje
           ? "Your membership access has been suspended. Contact TheTradersCartel for assistance."
           : actualStatus === "rejected"
             ? "Your membership request was not approved. Contact TheTradersCartel if you believe this is a mistake."
-            : "Your email is verified. The owner has been notified and will review your membership."
+            : "Your account is ready. The owner or developer will review your membership from the private approvals page."
       }
     >
       <div className="border-t border-white/12 pt-7">
