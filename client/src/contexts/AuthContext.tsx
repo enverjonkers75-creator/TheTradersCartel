@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(nextSession);
       window.setTimeout(() => {
         void loadProfile(nextSession)
-          .catch(() => setProfile(null))
+          .catch(() => undefined)
           .finally(() => setLoading(false));
       }, 0);
     });
