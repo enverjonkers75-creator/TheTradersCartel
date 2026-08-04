@@ -100,9 +100,35 @@ function readableAuthError(message: string) {
   if (normalized.includes("invalid login credentials")) return "The email or password is incorrect.";
   if (normalized.includes("email not confirmed")) return "Confirm your email before signing in.";
   if (normalized.includes("user already registered") || normalized.includes("already been registered")) return "An account already exists for this email. Sign in or reset your password.";
-  if (normalized.includes("email rate limit")) return "Too many emails were requested. Wait a few minutes and try again.";
+  if (normalized.includes("email rate limit")) return "Confirmation emails are temporarily rate-limited. Please wait before retrying. The site owner must enable production SMTP before opening registration to high traffic.";
   if (normalized.includes("rate limit")) return "Too many attempts. Wait a few minutes and try again.";
   return message;
+}
+
+const EMAIL_COOLDOWN_MS = 60_000;
+const EMAIL_RATE_LIMIT_COOLDOWN_MS = 10 * 60_000;
+const emailCooldownKey = (action: string, email: string) => `ttc-auth-email-cooldown:${action}:${email}`;
+
+function getEmailCooldown(action: string, email: string) {
+  try {
+    const until = Number(window.localStorage.getItem(emailCooldownKey(action, email)) || 0);
+    return Number.isFinite(until) ? Math.max(0, until - Date.now()) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function setEmailCooldown(action: string, email: string, duration = EMAIL_COOLDOWN_MS) {
+  try { window.localStorage.setItem(emailCooldownKey(action, email), String(Date.now() + duration)); } catch { /* storage may be disabled */ }
+}
+
+function clearEmailCooldown(action: string, email: string) {
+  try { window.localStorage.removeItem(emailCooldownKey(action, email)); } catch { /* storage may be disabled */ }
+}
+
+function cooldownMessage(milliseconds: number) {
+  const seconds = Math.max(1, Math.ceil(milliseconds / 1000));
+  return `A confirmation request was already sent. Please wait ${seconds} seconds before trying again.`;
 }
 
 export function LoginPage() {
@@ -133,15 +159,22 @@ export function LoginPage() {
 
   async function resendConfirmation() {
     if (!unverifiedEmail) return;
+    const cooldown = getEmailCooldown("confirmation", unverifiedEmail);
+    if (cooldown > 0) return setError(cooldownMessage(cooldown));
     setResendBusy(true);
     setResendSent(false);
+    setEmailCooldown("confirmation", unverifiedEmail);
     const { error: resendError } = await supabase.auth.resend({
       type: "signup",
       email: unverifiedEmail,
       options: { emailRedirectTo: `${authCallbackOrigin}/pending` },
     });
     setResendBusy(false);
-    if (resendError) return setError(readableAuthError(resendError.message));
+    if (resendError) {
+      if (resendError.message.toLowerCase().includes("rate limit")) setEmailCooldown("confirmation", unverifiedEmail, EMAIL_RATE_LIMIT_COOLDOWN_MS);
+      else clearEmailCooldown("confirmation", unverifiedEmail);
+      return setError(readableAuthError(resendError.message));
+    }
     setResendSent(true);
   }
   return (
@@ -230,6 +263,12 @@ export function SignupPage() {
       setBusy(false);
       return setError("Enter your full name.");
     }
+    const cooldown = getEmailCooldown("signup", email);
+    if (cooldown > 0) {
+      setBusy(false);
+      return setError(cooldownMessage(cooldown));
+    }
+    setEmailCooldown("signup", email);
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -239,7 +278,11 @@ export function SignupPage() {
       },
     });
     setBusy(false);
-    if (authError) return setError(readableAuthError(authError.message));
+    if (authError) {
+      if (authError.message.toLowerCase().includes("rate limit")) setEmailCooldown("signup", email, EMAIL_RATE_LIMIT_COOLDOWN_MS);
+      else if (!authError.message.toLowerCase().includes("already registered")) clearEmailCooldown("signup", email);
+      return setError(readableAuthError(authError.message));
+    }
     setSubmitted(true);
   }
   if (submitted)
