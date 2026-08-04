@@ -98,7 +98,7 @@ function validatePassword(password: string) {
 function readableAuthError(message: string) {
   const normalized = message.toLowerCase();
   if (normalized.includes("invalid login credentials")) return "The email or password is incorrect.";
-  if (normalized.includes("email not confirmed")) return "Your account is not ready yet. Contact the owner to activate it.";
+  if (normalized.includes("email not confirmed")) return "Confirm your email before signing in.";
   if (normalized.includes("user already registered") || normalized.includes("already been registered")) return "An account already exists for this email. Sign in or reset your password.";
   if (normalized.includes("email rate limit")) return "Email delivery is disabled for this membership flow. Please try again shortly or contact the owner.";
   if (normalized.includes("rate limit")) return "Too many attempts. Wait a few minutes and try again.";
@@ -109,6 +109,9 @@ export function LoginPage() {
   const [, setLocation] = useLocation();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
   const passwordReset = new URLSearchParams(window.location.search).get("reset") === "success";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -122,9 +125,24 @@ export function LoginPage() {
     });
     setBusy(false);
     if (authError) {
+      if (authError.message.toLowerCase().includes("email not confirmed")) setUnverifiedEmail(email);
       return setError(readableAuthError(authError.message));
     }
     setLocation("/dashboard");
+  }
+
+  async function resendConfirmation() {
+    if (!unverifiedEmail || resendBusy || resendSent) return;
+    setResendBusy(true);
+    setError("");
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email: unverifiedEmail,
+      options: { emailRedirectTo: `${authCallbackOrigin}/pending` },
+    });
+    setResendBusy(false);
+    if (resendError) return setError(readableAuthError(resendError.message));
+    setResendSent(true);
   }
 
   return (
@@ -139,6 +157,7 @@ export function LoginPage() {
         )}
         {passwordReset && <p role="status" className="border-l border-emerald-400/60 pl-3 text-xs leading-5 text-emerald-200/80">Password updated. You can sign in with your new password.</p>}
         {error && <ErrorMessage message={error} />}
+        {unverifiedEmail && <button type="button" disabled={resendBusy || resendSent} onClick={() => void resendConfirmation()} className="flex items-center gap-2 text-xs text-white/55 transition hover:text-white disabled:opacity-50"><RefreshCw className={`size-3.5 ${resendBusy ? "animate-spin" : ""}`} />{resendSent ? "Confirmation email sent" : resendBusy ? "Sending confirmation…" : "Resend confirmation email"}</button>}
         <label className={labelClass}>
           Email
           <input
@@ -212,6 +231,7 @@ export function SignupPage() {
       password,
       options: {
         data: { full_name: fullName },
+        emailRedirectTo: `${authCallbackOrigin}/pending`,
       },
     });
     setBusy(false);
@@ -224,13 +244,13 @@ export function SignupPage() {
     return (
       <AuthFrame
         eyebrow="Thank you for joining"
-        title="Thank you. Your account is awaiting approval"
-        description="Your account has been created. The owner or developer will review it from the private member approvals page."
+        title="Confirm your email, then wait for approval"
+        description="Your account has been created. Confirm your email address, then sign in so the owner or developer can approve your membership."
       >
         <div className="border-t border-white/12 pt-7">
           <CheckCircle2 className="size-7 text-white" />
           <p className="mt-4 text-sm leading-6 text-white/55">
-            Thank you. Your account is ready and will unlock automatically after approval. No email confirmation is required.
+            Thank you. Check your inbox, confirm your email, then sign in. Access unlocks after owner approval.
           </p>
           <Link
             href="/login"
