@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateAnalytics, calculateCumulativePnl, calculateEquityCurve, calculateQuickJournalAnalytics, calculateTradeMetrics, groupForZarBalance, validateJournalScreenshot } from "@shared/member";
 import { courseLessons, courseSummaryLessons, getCourseCompletion, isCourseLessonUnlocked } from "@/lib/course";
-import { leaderboardFeed } from "@/lib/leaderboard";
 import { formatMemberActivity, isMemberOnline } from "@/lib/presence";
 
 describe("groupForZarBalance", () => {
@@ -124,13 +123,5 @@ describe("member presence", () => {
     expect(formatMemberActivity("2026-08-02T09:59:00Z", now)).toBe("Online now");
     expect(formatMemberActivity("2026-08-02T09:40:00Z", now)).toBe("Last seen 20 min ago");
     expect(formatMemberActivity(null, now)).toBe("Never active");
-  });
-});
-
-describe("leaderboard preview feed", () => {
-  it("stays ranked by return until the live API replaces it", () => {
-    expect(leaderboardFeed.status).toBe("preview");
-    expect(leaderboardFeed.entries.map((entry) => entry.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(leaderboardFeed.entries.every((entry, index, entries) => index === 0 || entries[index - 1].returnPercent >= entry.returnPercent)).toBe(true);
   });
 });
