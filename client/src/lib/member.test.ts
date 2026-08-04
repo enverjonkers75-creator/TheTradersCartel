@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateAnalytics, calculateCumulativePnl, calculateEquityCurve, calculateQuickJournalAnalytics, calculateTradeMetrics, groupForZarBalance, validateJournalScreenshot } from "@shared/member";
 import { courseLessons, courseSummaryLessons, getCourseCompletion, isCourseLessonUnlocked } from "@/lib/course";
-import { competitionRules, rankCompetition } from "@/lib/leaderboard";
+import { competitionRules, leaderboardFeed, leaderboardFeeds, rankCompetition } from "@/lib/leaderboard";
 import { formatMemberActivity, isMemberOnline } from "@/lib/presence";
 
 describe("groupForZarBalance", () => {
@@ -127,14 +127,20 @@ describe("member presence", () => {
   });
 });
 
-describe("live leaderboard ranking", () => {
+describe("leaderboard preview feed", () => {
+  it("stays ranked by return until the live API replaces it", () => {
+    expect(leaderboardFeed.status).toBe("preview");
+    expect(leaderboardFeed.entries.map((entry) => entry.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    const eligible = leaderboardFeed.entries.filter((entry) => entry.status === "eligible");
+    expect(eligible.every((entry, index, entries) => index === 0 || entries[index - 1].returnPercent >= entry.returnPercent)).toBe(true);
+  });
+
   it("moves breached accounts below every eligible account", () => {
-    const base = { displayName: "Trader", initials: "TR", maximumOverallDrawdownPercent: 3, maximumDailyDrawdownPercent: 2, maximumRiskPerTradePercent: 0.8, educationPoints: 0, seminarPoints: 0 };
-    const ranked = rankCompetition([
-      { ...base, id: "breached", returnPercent: 20, ruleBreaches: ["missing_stop_loss"] },
-      { ...base, id: "eligible", returnPercent: 10, ruleBreaches: [] },
-    ]);
-    expect(ranked.map((entry) => entry.id)).toEqual(["eligible", "breached"]);
+    const eligible = leaderboardFeed.entries.filter((entry) => entry.status === "eligible");
+    const breached = leaderboardFeed.entries.filter((entry) => entry.status === "breached");
+    expect(eligible.length).toBeGreaterThan(0);
+    expect(breached.length).toBeGreaterThan(0);
+    expect(Math.max(...eligible.map((entry) => entry.rank))).toBeLessThan(Math.min(...breached.map((entry) => entry.rank)));
   });
 
   it("uses lowest overall drawdown as the return tie breaker", () => {
@@ -150,4 +156,10 @@ describe("live leaderboard ranking", () => {
     expect(competitionRules).toEqual({ maximumDailyDrawdownPercent: 5, maximumOverallDrawdownPercent: 10, maximumRiskPerTradePercent: 1 });
   });
 
+  it("keeps real and demo competitors in separate feeds", () => {
+    expect(leaderboardFeeds.demo.accountType).toBe("demo");
+    expect(leaderboardFeeds.real.accountType).toBe("real");
+    expect(leaderboardFeeds.demo.entries.every((entry) => entry.id.startsWith("preview-"))).toBe(true);
+    expect(leaderboardFeeds.real.entries.every((entry) => entry.id.startsWith("real-preview-"))).toBe(true);
+  });
 });
