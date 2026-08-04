@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, GraduationCap, LayoutDashboard, Link2, LogOut, Menu, Plus, ShieldCheck, Trophy, X } from "lucide-react";
+import { BookOpen, GraduationCap, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -11,7 +11,6 @@ const memberItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Course", href: "/dashboard/course", icon: GraduationCap },
   { label: "Journal", href: "/dashboard/journal", icon: BookOpen },
-  { label: "Accounts", href: "/dashboard/accounts", icon: Link2 },
 ];
 
 function Brand() {
@@ -24,9 +23,7 @@ export function MemberLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const initials = profile?.full_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "TC";
   const admin = profile?.role === "owner" || profile?.role === "developer";
-  const items = admin
-    ? [...memberItems.slice(0, 1), { label: "Leaderboard", href: "/dashboard/leaderboard", icon: Trophy }, ...memberItems.slice(1)]
-    : memberItems;
+  const items = memberItems;
 
   useEffect(() => {
     if (!profile || profile.status !== "active") return;
