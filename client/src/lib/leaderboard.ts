@@ -1,92 +1,36 @@
-export const competitionRules = {
-  maximumDailyDrawdownPercent: 5,
-  maximumOverallDrawdownPercent: 10,
-  maximumRiskPerTradePercent: 1,
-} as const;
-
-export type CompetitionStatus = "eligible" | "breached" | "awaiting_connection";
-export type CompetitionAccountType = "demo" | "real";
-
 export type LeaderboardEntry = {
   id: string;
-  rank: number;
   displayName: string;
   initials: string;
-  returnPercent: number;
-  maximumDailyDrawdownPercent: number;
-  maximumOverallDrawdownPercent: number;
-  maximumRiskPerTradePercent: number;
-  educationPoints: number;
-  seminarPoints: number;
-  status: CompetitionStatus;
+  activity: Record<LeaderboardPeriod, LeaderboardActivity>;
+};
+
+export type LeaderboardPeriod = "week" | "month";
+
+export type LeaderboardActivity = {
+  trades: number;
+  totalLots: number;
 };
 
 export type LeaderboardFeed = {
-  accountType: CompetitionAccountType;
   status: "preview" | "live";
   updatedAt: string | null;
   entries: LeaderboardEntry[];
 };
 
-type UnrankedEntry = Omit<LeaderboardEntry, "rank" | "status">;
-
-export function getCompetitionStatus(entry: UnrankedEntry): CompetitionStatus {
-  return entry.maximumDailyDrawdownPercent > competitionRules.maximumDailyDrawdownPercent
-    || entry.maximumOverallDrawdownPercent > competitionRules.maximumOverallDrawdownPercent
-    || entry.maximumRiskPerTradePercent > competitionRules.maximumRiskPerTradePercent
-    ? "breached"
-    : "eligible";
-}
-
-export function rankCompetition(entries: UnrankedEntry[]): LeaderboardEntry[] {
-  return entries
-    .map((entry) => ({ ...entry, status: getCompetitionStatus(entry) }))
-    .sort((a, b) => {
-      if (a.status !== b.status) return a.status === "eligible" ? -1 : 1;
-      return b.returnPercent - a.returnPercent
-        || a.maximumOverallDrawdownPercent - b.maximumOverallDrawdownPercent;
-    })
-    .map((entry, index) => ({ ...entry, rank: index + 1 }));
-}
-
-// Demonstration data only. The server-side MetaTrader adapter will replace these
-// metrics once read-only demo-account connections are configured.
-const demoLeaderboardFeed: LeaderboardFeed = {
-  accountType: "demo",
+// Replace this feed with the broker/API response when access is available.
+// Keeping the page dependent on this shape avoids a visual rebuild later.
+export const leaderboardFeed: LeaderboardFeed = {
   status: "preview",
   updatedAt: null,
-  entries: rankCompetition([
-    { id: "preview-1", displayName: "Aaliyah M", initials: "AM", returnPercent: 14.82, maximumDailyDrawdownPercent: 2.14, maximumOverallDrawdownPercent: 4.32, maximumRiskPerTradePercent: 0.8, educationPoints: 90, seminarPoints: 20 },
-    { id: "preview-2", displayName: "Daniel K", initials: "DK", returnPercent: 12.46, maximumDailyDrawdownPercent: 1.92, maximumOverallDrawdownPercent: 3.88, maximumRiskPerTradePercent: 0.72, educationPoints: 75, seminarPoints: 30 },
-    { id: "preview-3", displayName: "Mikhail S", initials: "MS", returnPercent: 10.91, maximumDailyDrawdownPercent: 2.76, maximumOverallDrawdownPercent: 5.16, maximumRiskPerTradePercent: 0.94, educationPoints: 100, seminarPoints: 10 },
-    { id: "preview-4", displayName: "Tariq J", initials: "TJ", returnPercent: 9.73, maximumDailyDrawdownPercent: 1.44, maximumOverallDrawdownPercent: 2.97, maximumRiskPerTradePercent: 0.65, educationPoints: 65, seminarPoints: 20 },
-    { id: "preview-5", displayName: "Nicole R", initials: "NR", returnPercent: 8.58, maximumDailyDrawdownPercent: 3.31, maximumOverallDrawdownPercent: 6.74, maximumRiskPerTradePercent: 0.89, educationPoints: 85, seminarPoints: 30 },
-    { id: "preview-6", displayName: "Keenan B", initials: "KB", returnPercent: 7.84, maximumDailyDrawdownPercent: 2.48, maximumOverallDrawdownPercent: 4.91, maximumRiskPerTradePercent: 0.76, educationPoints: 70, seminarPoints: 10 },
-    { id: "preview-7", displayName: "Zahra E", initials: "ZE", returnPercent: 15.64, maximumDailyDrawdownPercent: 5.42, maximumOverallDrawdownPercent: 7.25, maximumRiskPerTradePercent: 0.9, educationPoints: 95, seminarPoints: 20 },
-    { id: "preview-8", displayName: "Liam P", initials: "LP", returnPercent: 11.37, maximumDailyDrawdownPercent: 2.62, maximumOverallDrawdownPercent: 5.83, maximumRiskPerTradePercent: 1.18, educationPoints: 80, seminarPoints: 10 },
-  ]),
+  entries: [
+    { id: "preview-1", displayName: "Aaliyah M", initials: "AM", activity: { week: { trades: 18, totalLots: 7.4 }, month: { trades: 58, totalLots: 23.8 } } },
+    { id: "preview-2", displayName: "Daniel K", initials: "DK", activity: { week: { trades: 16, totalLots: 6.8 }, month: { trades: 47, totalLots: 19.2 } } },
+    { id: "preview-3", displayName: "Mikhail S", initials: "MS", activity: { week: { trades: 14, totalLots: 5.9 }, month: { trades: 52, totalLots: 21.5 } } },
+    { id: "preview-4", displayName: "Tariq J", initials: "TJ", activity: { week: { trades: 13, totalLots: 5.2 }, month: { trades: 38, totalLots: 16.1 } } },
+    { id: "preview-5", displayName: "Nicole R", initials: "NR", activity: { week: { trades: 12, totalLots: 4.8 }, month: { trades: 55, totalLots: 22.4 } } },
+    { id: "preview-6", displayName: "Keenan B", initials: "KB", activity: { week: { trades: 11, totalLots: 4.4 }, month: { trades: 69, totalLots: 27.6 } } },
+    { id: "preview-7", displayName: "Zahra E", initials: "ZE", activity: { week: { trades: 9, totalLots: 3.7 }, month: { trades: 41, totalLots: 17.3 } } },
+    { id: "preview-8", displayName: "Liam P", initials: "LP", activity: { week: { trades: 8, totalLots: 3.3 }, month: { trades: 44, totalLots: 18.5 } } },
+  ],
 };
-
-const realLeaderboardFeed: LeaderboardFeed = {
-  accountType: "real",
-  status: "preview",
-  updatedAt: null,
-  entries: rankCompetition([
-    { id: "real-preview-1", displayName: "Samantha J", initials: "SJ", returnPercent: 9.64, maximumDailyDrawdownPercent: 1.84, maximumOverallDrawdownPercent: 3.77, maximumRiskPerTradePercent: 0.68, educationPoints: 85, seminarPoints: 30 },
-    { id: "real-preview-2", displayName: "Yusuf A", initials: "YA", returnPercent: 8.92, maximumDailyDrawdownPercent: 2.06, maximumOverallDrawdownPercent: 4.13, maximumRiskPerTradePercent: 0.74, educationPoints: 95, seminarPoints: 20 },
-    { id: "real-preview-3", displayName: "Chad W", initials: "CW", returnPercent: 7.76, maximumDailyDrawdownPercent: 1.56, maximumOverallDrawdownPercent: 3.21, maximumRiskPerTradePercent: 0.61, educationPoints: 70, seminarPoints: 20 },
-    { id: "real-preview-4", displayName: "Fatima R", initials: "FR", returnPercent: 6.85, maximumDailyDrawdownPercent: 2.48, maximumOverallDrawdownPercent: 4.86, maximumRiskPerTradePercent: 0.82, educationPoints: 100, seminarPoints: 30 },
-    { id: "real-preview-5", displayName: "Jason L", initials: "JL", returnPercent: 5.93, maximumDailyDrawdownPercent: 3.02, maximumOverallDrawdownPercent: 5.92, maximumRiskPerTradePercent: 0.96, educationPoints: 60, seminarPoints: 10 },
-    { id: "real-preview-6", displayName: "Thando N", initials: "TN", returnPercent: 4.81, maximumDailyDrawdownPercent: 2.37, maximumOverallDrawdownPercent: 4.48, maximumRiskPerTradePercent: 0.71, educationPoints: 80, seminarPoints: 20 },
-    { id: "real-preview-7", displayName: "Riya P", initials: "RP", returnPercent: 10.28, maximumDailyDrawdownPercent: 4.11, maximumOverallDrawdownPercent: 10.34, maximumRiskPerTradePercent: 0.88, educationPoints: 90, seminarPoints: 30 },
-    { id: "real-preview-8", displayName: "Mason D", initials: "MD", returnPercent: 7.18, maximumDailyDrawdownPercent: 2.89, maximumOverallDrawdownPercent: 5.61, maximumRiskPerTradePercent: 1.12, educationPoints: 75, seminarPoints: 10 },
-  ]),
-};
-
-export const leaderboardFeeds: Record<CompetitionAccountType, LeaderboardFeed> = {
-  demo: demoLeaderboardFeed,
-  real: realLeaderboardFeed,
-};
-
-// Backwards-compatible alias for existing consumers and tests.
-export const leaderboardFeed = leaderboardFeeds.demo;
